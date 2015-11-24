@@ -8,6 +8,11 @@
                   [ns-tracker "0.2.2"]
                   [adzerk/boot-reload        "0.2.6"]
                   [fipp "0.5.2"]
+
+                  [regexpforobj "1.0.0-alpha2-SNAPSHOT"]
+                  [fulab.zarnidict/fulabdsl "1.0.0-alpha1-SNAPSHOT"]
+
+
                   ]
   :source-paths    #{"src"}
   )
