@@ -74,11 +74,11 @@
    ]
   (with-pre-wrap fileset
     (if (not-any? nil? (hash-set structure language-in language-out))
-      (if-let [structure-obj (contains? fulabdicts.structures/structures structure)]
+      (if-let [structure-obj (fulabdicts.structures/structures structure)]
         (let [text (slurp filename)
               lines (clojure.string/split-lines text)
               _ (println "Read file" (str\" filename \" ":") (count lines) "lines")
-              parsed (fulabdsl/parse-fulabdsl-lines lines)
+              parsed (apply fulabdsl/parse-fulabdsl-lines lines structure-obj)
               ]
           (if (regexpforobj.core/is_parsing_error? parsed)
             (do
