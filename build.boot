@@ -20,6 +20,11 @@
 (use '[ns-tracker.core :only [ns-tracker]])
 (require '[adzerk.boot-reload :refer [reload]])
 (require '[fulabdicts.core])
+(require '[fulab.zarnidict.fulabdsl.core :as fulabdsl])
+(require '[fulabdicts.structures])
+(require '[regexpforobj.core])
+(require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
+
 
 (deftask wrap-reload
   "Reload namespaces of modified files before the request is passed to the
@@ -56,5 +61,40 @@
     (reload)
     (wrap-reload "src")
     (main)
+    )
+  )
+
+
+(deftask upload
+  "Parse dict and upload it to the web-service"
+  [f filename FILE str "Filename"
+   i language-in NAME str "Input language ISO code"
+   o language-out NAME str "Output language ISO code"
+   s structure NAME str "Название структуры"
+   ]
+  (with-pre-wrap fileset
+    (if (not-any? nil? (hash-set structure language-in language-out))
+      (if-let [structure-obj (contains? fulabdicts.structures/structures structure)]
+        (let [text (slurp filename)
+              lines (clojure.string/split-lines text)
+              _ (println "Read file" (str\" filename \" ":") (count lines) "lines")
+              parsed (fulabdsl/parse-fulabdsl-lines lines)
+              ]
+          (if (regexpforobj.core/is_parsing_error? parsed)
+            (do
+            (println "ParsingError")
+              (fipp
+                (update parsed :context
+                     #(apply str (take 1000 (prn-str %)))
+                     )))
+            (let [_ (println "Pasring success:" (count parsed) "articles")]
+              )
+            )
+          )
+          (println "Structure" (str \" structure \") "is not supported!")
+        )
+      (println "Error: You must specify structure, language-in, language-out")
+      )
+    fileset
     )
   )
