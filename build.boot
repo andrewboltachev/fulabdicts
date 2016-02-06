@@ -111,7 +111,7 @@
   )
 
 
-(deftask upload-dev-task []
+(deftask upload-dev-task
   "Parse dict and output line count if it's ok. In loop"
   [f filename FILE str "Filename"
    i language-in NAME str "Input language ISO code"
