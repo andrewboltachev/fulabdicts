@@ -90,7 +90,7 @@
       s6-0])])]
  s15-0))
 
-(defn main []
+(defn main1 []
   "I don't do a whole lot."
   []
   (let [lines (clojure.string/split-lines (slurp "/home/andrey/docs/zarnidict/source/mhr-rus.dsl"))]
@@ -161,3 +161,5 @@
   ;(run-tests 'fulabdicts.core)
   )
 
+(defn main []
+  )

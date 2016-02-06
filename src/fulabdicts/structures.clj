@@ -2,7 +2,7 @@
 
 (use '[regexpforobj.core])
 
-(def g1 (let
+(def g1_strange (let
  [s2-0
   (Seq
    [(MayBe (Char "pre"))
@@ -75,6 +75,10 @@
       s6-0])])]
  s15-0))
           
+
+(def g1
+  (Char "pre")
+  )
           
 (def structures
   {"foo" [
