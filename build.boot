@@ -65,6 +65,33 @@
   )
 
 
+(defn upload-fn [filename language-in language-out structure process-fn]
+  (if (not-any? nil? (hash-set structure language-in language-out))
+    (if-let [structure-obj (fulabdicts.structures/structures structure)]
+      (let [text (slurp filename)
+            lines (clojure.string/split-lines text)
+            _ (println "Read file" (str\" filename \" ":") (count lines) "lines")
+            parsed (apply fulabdsl/parse-fulabdsl-lines lines structure-obj)
+            ]
+        (if (regexpforobj.core/is_parsing_error? parsed)
+          (do
+          (println "ParsingError")
+            (fipp
+              (update parsed :context
+                   #(apply str (take 1000 (prn-str %)))
+                   )))
+          (let [_ (println "Pasring success:" (count parsed) "articles")]
+            (process-fn parsed)
+            )
+          )
+        )
+        (println "Structure" (str \" structure \") "is not supported!")
+      )
+    (println "Error: You must specify structure, language-in, language-out")
+    )
+  )
+
+
 (deftask upload
   "Parse dict and upload it to the web-service"
   [f filename FILE str "Filename"
@@ -73,28 +100,44 @@
    s structure NAME str "Название структуры"
    ]
   (with-pre-wrap fileset
-    (if (not-any? nil? (hash-set structure language-in language-out))
-      (if-let [structure-obj (fulabdicts.structures/structures structure)]
-        (let [text (slurp filename)
-              lines (clojure.string/split-lines text)
-              _ (println "Read file" (str\" filename \" ":") (count lines) "lines")
-              parsed (apply fulabdsl/parse-fulabdsl-lines lines structure-obj)
-              ]
-          (if (regexpforobj.core/is_parsing_error? parsed)
-            (do
-            (println "ParsingError")
-              (fipp
-                (update parsed :context
-                     #(apply str (take 1000 (prn-str %)))
-                     )))
-            (let [_ (println "Pasring success:" (count parsed) "articles")]
-              )
-            )
-          )
-          (println "Structure" (str \" structure \") "is not supported!")
-        )
-      (println "Error: You must specify structure, language-in, language-out")
-      )
+    (upload-fn
+      filename
+      language-in
+      language-out
+      structure
+      identity)
     fileset
+    )
+  )
+
+
+(deftask upload-dev-task []
+  "Parse dict and output line count if it's ok. In loop"
+  [f filename FILE str "Filename"
+   i language-in NAME str "Input language ISO code"
+   o language-out NAME str "Output language ISO code"
+   s structure NAME str "Название структуры"
+   ]
+  (with-pre-wrap fileset
+    (upload-fn
+      filename
+      language-in
+      language-out
+      structure
+      identity)
+    fileset
+    )
+  )
+
+
+(deftask upload-dev
+  "Development loop"
+  []
+  (comp
+    (watch)
+    (speak)
+    (reload)
+    (wrap-reload "src")
+    (upload-dev-task)
     )
   )
