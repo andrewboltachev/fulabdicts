@@ -77,7 +77,24 @@
           
 
 (def g1
-  (Char "pre")
+  (Seq [
+        (MayBe (Char "pre"))
+        (MayBe (Char "m1"))
+        (Star 
+    (Seq [
+          (Char "trn")
+          (Star (Seq [
+                       (Char "mhr")
+                       (MayBe (Char "aut"))
+                       (Char "rus")
+                       ]))
+          (MayBe (Seq [
+                       (Char "ex")
+                       (Char "ref")
+                       ]))
+          ])
+               )
+        ])
   )
           
 (def structures

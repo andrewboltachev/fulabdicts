@@ -24,6 +24,8 @@
 (require '[fulabdicts.structures])
 (require '[regexpforobj.core])
 (require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
+(require '[clojure.java.io :as io])
+(require '[boot.core :as c])
 
 
 (deftask wrap-reload
@@ -71,7 +73,7 @@
       (let [text (slurp filename)
             lines (clojure.string/split-lines text)
             _ (println "Read file" (str\" filename \" ":") (count lines) "lines")
-            parsed (apply fulabdsl/parse-fulabdsl-lines lines structure-obj)
+            parsed (apply fulabdsl/parse-fulabdsl-lines-short lines structure-obj)
             ]
         (if (regexpforobj.core/is_parsing_error? parsed)
           (do
@@ -82,6 +84,33 @@
                    )))
           (let [_ (println "Pasring success:" (count parsed) "articles")]
             (process-fn parsed)
+            )
+          )
+        )
+        (println "Structure" (str \" structure \") "is not supported!")
+      )
+    (println "Error: You must specify structure, language-in, language-out")
+    )
+  )
+
+
+(defn upload-fn-short [filename language-in language-out structure]
+  (if (not-any? nil? (hash-set structure language-in language-out))
+    (if-let [structure-obj (fulabdicts.structures/structures structure)]
+      (let [text (slurp filename)
+            lines (clojure.string/split-lines text)
+            _ (println "Read file" (str\" filename \" ":") (count lines) "lines")
+            parsed (apply fulabdsl/parse-fulabdsl-lines-short lines structure-obj)
+            ]
+        (if (regexpforobj.core/is_parsing_error? parsed)
+          (do
+          (println "ParsingError")
+            (fipp
+              (update parsed :context
+                   #(apply str (take 1000 (prn-str %)))
+                   )))
+          (let [_ (println "Pasring success:" (count parsed) "articles")]
+            parsed
             )
           )
         )
@@ -111,33 +140,51 @@
   )
 
 
-(deftask upload-dev-task
+(deftask upload-dev
   "Parse dict and output line count if it's ok. In loop"
   [f filename FILE str "Filename"
    i language-in NAME str "Input language ISO code"
    o language-out NAME str "Output language ISO code"
    s structure NAME str "Название структуры"
    ]
-  (with-pre-wrap fileset
-    (upload-fn
+  (let [tmp (c/tmp-dir!)]
+    (comp
+    (fn middleware [next-handler]                   ; [2]
+      (fn handler [fileset]                         ; [3]
+        (c/empty-dir! tmp)
+        (let [out-file (io/file tmp "file1")]
+(doto out-file
+    io/make-parents
+    (spit
+      (prn-str (doall (upload-fn-short
       filename
       language-in
       language-out
       structure
-      identity)
-    fileset
-    )
-  )
-
-
-(deftask upload-dev
-  "Development loop"
-  []
-  (comp
-    (watch)
-    (speak)
-    (reload)
-    (wrap-reload "src")
-    (upload-dev-task)
+        )))
+      ))
+          )
+        (next-handler
+          (c/add-resource fileset tmp))))
+      (watch)
+      (speak)
+      (reload)
+      (wrap-reload "src")
+    (with-pre-wrap fileset
+      #_(upload-fn-short
+        filename
+        language-in
+        language-out
+        structure
+        identity)
+      (doseq [in (c/output-files fileset)]
+        (when (= (c/tmp-path in) "file1")
+          (println
+            (doall (slurp (c/tmp-file in)))
+            )
+          )
+        )
+      fileset
+      ))
     )
   )
