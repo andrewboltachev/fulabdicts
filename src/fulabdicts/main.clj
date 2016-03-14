@@ -16,14 +16,13 @@
   ; check exists (.exists (io/file "filename.txt"))
   (let [file (io/file input-file)]
 
-(go-loop [standby true
-          old-filename nil] ; TODO merge these params?
+(go-loop [old-filename nil]
          (let [[[event filename :as v] port] (alts! [input-file-ch
                                 (timeout 200)
                                 ]
                                :priority true
                                )]
-           (when (not standby)
+           (when-not (nil? old-filename)
              #_(println
                  (str "!!!!!!!!!!!!!!!!!!!!!!!!!!!!" v port)
                  (System/currentTimeMillis)
@@ -32,12 +31,10 @@
                   (nil? v)
                   (println "Input file" (str \" old-filename \") "changed")
                 )
+               )
+             (recur filename)
              )
-           (recur (nil? v)
-                  (or filename old-filename)
-                  )
            )
-  )
 
 
   (start-watch [{:path (.getParent file)
