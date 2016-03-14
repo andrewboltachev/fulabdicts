@@ -25,7 +25,7 @@
                )
               (when
                   (nil? v)
-                  (println "will send")
+                  (println "Input file changed")
                 )
              )
            (recur (nil? v))
@@ -46,6 +46,6 @@
                                (put! input-file-ch [event filename])
                              )
                              )
-                 :options {:recursive true}}])
+                 :options {:recursive false}}])
     )
   )
