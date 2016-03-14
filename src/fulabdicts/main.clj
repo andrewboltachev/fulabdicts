@@ -12,8 +12,13 @@
          (sliding-buffer 1)
          ))
 
-(go-loop [standby true]
-         (let [[v port] (alts! [input-file-ch
+(defn -main [& [input-file params-file :as args]]
+  ; check exists (.exists (io/file "filename.txt"))
+  (let [file (io/file input-file)]
+
+(go-loop [standby true
+          old-filename nil] ; TODO merge these params?
+         (let [[[event filename :as v] port] (alts! [input-file-ch
                                 (timeout 200)
                                 ]
                                :priority true
@@ -25,17 +30,16 @@
                )
               (when
                   (nil? v)
-                  (println "Input file changed")
+                  (println "Input file" (str \" old-filename \") "changed")
                 )
              )
-           (recur (nil? v))
+           (recur (nil? v)
+                  (or filename old-filename)
+                  )
            )
   )
 
 
-(defn -main [& [input-file params-file :as args]]
-  ; check exists (.exists (io/file "filename.txt"))
-  (let [file (io/file input-file)]
   (start-watch [{:path (.getParent file)
                  :event-types [:create :modify
                                ;:delete
