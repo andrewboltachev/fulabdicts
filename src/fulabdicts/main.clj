@@ -5,6 +5,7 @@
                                           ]]
     [clojure.java.io :as io]
     [clojure-watch.core :refer [start-watch]]
+    [fulab.zarnidict.fulabdsl.core :as fulabdsl]
     )
   )
 
@@ -53,10 +54,84 @@
      ))
   )
 
+(def input-file-ch (chan))
+(def params-file-ch (chan))
+
+(def input-file-data-ch (chan))
+(def params-file-data-ch (chan))
+
+(go-loop []
+         (let [
+               filename (<! input-file-ch)
+            data
+                 (try
+                  (->
+                    (with-open [rdr (clojure.java.io/reader filename)]
+                      (doseq [line (line-seq rdr)]
+                        line
+                        )
+                      )
+
+(fulabdsl/parse-fulabdsl-lines-short
+        :tag-compare-fn
+      #(if-not
+       (or (= %1 %2) (and (= %1 "m1") (= %2 "m")))
+       {:error :tags-mismatch :context [%1 %2]}
+       )
+:line-first-level-process-fn (comp list (fn [x]
+                                          (cond
+                                            (= x ", ")
+                                            {:tag "COMMA" :value x}
+
+                                            (contains? 
+                                             (set (map (comp str char) (range (int \Ⅰ) (+ (int \Ⅰ) 16))))
+                                              x)
+                                            {:tag "R" :value x}
+
+                                            (contains? 
+                                             #{"А." "Б."}
+                                              x)
+                                            {:tag "R" :value x}
+
+                                            :else
+                                            x
+                                            )
+                                          ))
+        )
+
+                    )
+                 (catch Throwable e (do (println e) nil))
+                 )
+               ]
+           (put! input-file-data-ch data)
+           )
+         (recur)
+         )
+
+
+(go-loop []
+         (let [
+               params (<! params-file-ch)
+               ]
+           )
+         (recur)
+         )
+
+(go-loop [prev-input nil
+          prev-params nil
+          prev-article-no nil]
+         (let [
+               new-input (alts! input-file-data-ch :default nil)
+               new-params (alts! params-file-data-ch :default nil)
+               ]
+           )
+         (recur
+           )
+         )
+
 (defn -main [& [input-file params-file :as args]]
   ; check exists (.exists (io/file "filename.txt"))
-  (let [input-file-ch (chan)
-        params-file-ch (chan)
+  (let [
         ]
     (watch-file-for-changes-depreciated
       input-file
