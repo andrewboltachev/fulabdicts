@@ -8,22 +8,17 @@
     )
   )
 
-#_(def input-file-ch (chan
-         (sliding-buffer 1)
-         ))
-
 (defmacro watch-file-for-changes-depreciated [filename output-channel]
   `(do
-  (def file-ch#
-(chan
+  (let [~'file-ch (chan
     (sliding-buffer 1)
   )
-    )
-  (let [~'file (io/file ~filename)]
-
+        ~'file (io/file ~filename)]
+    (do
+#_(println "go-loop" filename)
 (go-loop [~'old-filename nil]
-         (let [[[~'event ~'filename :as ~'v] ~'port] (alts! [file-ch#
-                                (timeout 200)
+         (let [[[~'event ~'filename :as ~'v] ~'port] (alts! [~'file-ch
+                                (timeout 500)
                                 ]
                                :priority true
                                )]
@@ -50,18 +45,26 @@
                  :bootstrap (fn [~'path] (println "Starting to watch " ~'path))
                  :callback (fn [~'event ~'filename]
                              (when (= (.getName ~'file) (.getName (io/file ~'filename)))
-                               (put! file-ch# [~'event ~'filename])
+                               (put! ~'file-ch [~'event ~'filename])
                              )
                              )
                  :options {:recursive false}}])
     )
-     )
+     ))
   )
 
 (defn -main [& [input-file params-file :as args]]
   ; check exists (.exists (io/file "filename.txt"))
-  (watch-file-for-changes-depreciated
-    input-file
-    (chan)
+  (let [input-file-ch (chan)
+        params-file-ch (chan)
+        ]
+    (watch-file-for-changes-depreciated
+      input-file
+      input-file-ch
+      )
+    (watch-file-for-changes-depreciated
+      params-file
+      params-file-ch
+      )
     )
   )
