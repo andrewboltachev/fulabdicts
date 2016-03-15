@@ -10,6 +10,14 @@
     )
   )
 
+(defn truncate
+  [s n]
+  (apply str (take n s)))
+
+(defn prn2 [data]
+  (str (truncate (prn-str data) 150) "... (" (-> data class str) ")")
+  )
+
 (defmacro watch-file-for-changes-depreciated [filename output-channel]
   `(do
   (let [~'file-ch (chan
@@ -71,9 +79,7 @@
                  (try
                   (->
                     (with-open [rdr (clojure.java.io/reader filename)]
-                      (doseq [line (line-seq rdr)]
-                        line
-                        )
+                      (doall (line-seq rdr))
                       )
 
 (fulabdsl/parse-fulabdsl-lines-short
@@ -109,6 +115,7 @@
                                         ))
                  )
                ]
+           (println "Sending data off the channel" (prn2 data))
            (put! input-file-data-ch data)
            )
          (recur)
@@ -129,34 +136,45 @@
                                         ))
                        )
                ]
+           (println "Sending grammar off the channel" (prn2 data))
            (put! params-file-data-ch data)
            )
          (recur)
          )
 
-(go-loop [prev-full-input nil
+#_(go-loop [prev-full-input nil
           prev-input nil
           prev-params nil
           result []
           ]
          (let [
                not-default (partial not= :default)
-               [new-input input-port] (alts! [input-file-data-ch] :default prev-input :priority true) ; TODO probably should be one alts!
-               [new-params params-port] (alts! [params-file-data-ch] :default prev-params :priority true)
+               ;_ (println "Will wait for input" (empty? prev-full-input))
+               [new-input input-port] (if (empty? prev-full-input)
+                                        (alts! [input-file-data-ch]) ; TODO probably should be one alts!
+                                        (alts! [input-file-data-ch] :default prev-input :priority true)
+                                        )
+               ;_ (println "Input OK. Will wait for params" (empty? prev-params))
+               [new-params params-port] (if (empty? prev-params)
+                                          (alts! [params-file-data-ch])
+                                          (alts! [params-file-data-ch] :default prev-params :priority true)
+                                        )
+               ;_ (println "Params OK")
 
                prev-full-input (if (not-default input-port) new-input prev-full-input)
                new-input (if (not-default params-port) prev-full-input prev-input)
 
-               something-new (some not-default (hash-set input-port params-port) )
+               something-new (some not-default (hash-set input-port params-port))
                result (if something-new [] result)
 
-               article (first prev-input)
+               article (first new-input)
                [word body] article
                grammar-applied (regexpforobj/run new-params body)
                grammar-applied (if (regexpforobj/is_parsing_error? grammar-applied) grammar-applied [word grammar-applied])
                ]
-           (if (empty? prev-input)
+           (if (empty? new-input)
              (do
+               (println "empty prev-input")
                (when-not (empty? result)
                 (put! result-ch result)
                  )
@@ -168,21 +186,24 @@
                 )
                )
              (if-not (regexpforobj/is_parsing_error? grammar-applied)
-               (recur
-                 prev-full-input
-                 (rest new-input)
-                 new-params
-                 (conj result grammar-applied)
+               (do
+                 (println "Applying grammar to article" word)
+                (recur
+                  prev-full-input
+                  (rest new-input)
+                  new-params
+                  (conj result grammar-applied)
+                  )
                  )
                (do
                  (println "Erorr")
                  (println word)
                  (println grammar-applied)
                  (recur
-                   nil
-                   nil
-                   nil
-                   []
+                  prev-full-input
+                  (rest new-input)
+                  new-params
+                  result
                    )
                  )
                )
