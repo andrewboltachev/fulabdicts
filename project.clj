@@ -14,5 +14,7 @@
 
 
                  [com.ashafa/clutch "0.4.0"]
+                 [io.aviso/pretty "0.1.24"]
+                 [aprint "0.1.3"]
                  ]
   :main fulabdicts.main)

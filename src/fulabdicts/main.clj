@@ -7,8 +7,19 @@
     [clojure-watch.core :refer [start-watch]]
     [fulab.zarnidict.fulabdsl.core :as fulabdsl]
     [regexpforobj.core :as regexpforobj]
+
+    [io.aviso.ansi :as font]
     )
   )
+(use 'aprint.core)
+
+(defmacro with-ns
+  "Evaluates body in another namespace.  ns is either a namespace
+  object or a symbol.  This makes it possible to define functions in
+  namespaces other than the current one."
+  [ns & body]
+  `(binding [*ns* (the-ns ~ns)]
+     ~@(map (fn [form] `(eval '~form)) body)))
 
 (defn truncate
   [s n]
@@ -39,7 +50,7 @@
                )
               (when
                   (nil? ~'v)
-                  (println "File" (str \" ~'old-filename \") "changed")
+                  (println font/blue-font "File" (str \" ~'old-filename \") "changed" font/reset-font)
                   (put! ~output-channel ~'old-filename)
                 )
                )
@@ -53,7 +64,7 @@
                  :event-types [:create :modify
                                ;:delete
                                ]
-                 :bootstrap (fn [~'path] (println "Starting to watch " ~'path))
+                 :bootstrap (fn [~'path] (println font/blue-font "Starting to watch " ~'path font/reset-font))
                  :callback (fn [~'event ~'filename]
                              (when (= (.getName ~'file) (.getName (io/file ~'filename)))
                                (put! ~'file-ch [~'event ~'filename])
@@ -115,7 +126,9 @@
                                         ))
                  )
                ]
-           (println "Sending data off the channel" (prn2 data))
+           (println "Sending data off the channel"
+                    ;(prn2 data)
+                    )
            (put! input-file-data-ch data)
            )
          (recur)
@@ -127,16 +140,23 @@
                params-filename (<! params-file-ch)
 
                data  (try
+                       (let [s
                   (->
                     (slurp params-filename)
                     read-string
-                    )
+                    )]
+(eval `(with-ns 'regexpforobj.core
+  (eval ~s)
+  ))
+                         )
                  (catch Throwable e (do (println e)
                                         {} ; XXX: empty grammar
                                         ))
                        )
                ]
-           (println "Sending grammar off the channel" (prn2 data))
+           (println "Sending grammar off the channel"
+                    ;(prn2 data)
+                    )
            (put! params-file-data-ch data)
            )
          (recur)
@@ -187,7 +207,7 @@
                )
              (if-not (regexpforobj/is_parsing_error? grammar-applied)
                (do
-                 (println "Applying grammar to article" word)
+                 (println font/bold-black-font word "OK")
                 (recur
                   prev-full-input
                   (rest new-input)
@@ -196,9 +216,8 @@
                   )
                  )
                (do
-                 (println "Erorr")
-                 (println word)
-                 (println grammar-applied)
+                 (println font/bold-black-font word)
+                 (println font/green-font grammar-applied font/reset-font)
                  (recur
                   prev-full-input
                   (rest new-input)
@@ -210,6 +229,92 @@
              )
            )
          )
+
+
+(go-loop
+  [
+   input nil
+   params nil
+
+   current-input nil
+   result []
+
+   await-for-changes false
+   ]
+  (let
+    [
+     [value port]
+     (if (or (empty? input) (empty? params) await-for-changes)
+       (alts! [input-file-data-ch params-file-data-ch])
+       (alts! [input-file-data-ch params-file-data-ch] :default nil)
+       )
+     ]
+    (cond
+      (= port input-file-data-ch)
+      (recur
+        value
+        params
+
+        value
+        []
+        false
+        )
+
+      (= port params-file-data-ch)
+      (recur
+        input
+        value
+
+        input
+        []
+        false
+        )
+
+      (empty? current-input)
+      (println "result")
+
+      :else
+      (let
+        [
+         article (first current-input)
+         [word body] article
+         grammar-applied (regexpforobj/run params body)
+         grammar-applied (if (regexpforobj/is_parsing_error? grammar-applied) grammar-applied [word grammar-applied])
+         ]
+        (if (regexpforobj/is_parsing_error? grammar-applied)
+          (do
+            (println "Error")
+            (aprint (update-in grammar-applied [:context :tail] regexpforobj/grammar_pretty))
+            (recur
+              input
+              params
+  
+              input
+              []
+              true
+              )
+            )
+          (recur
+            input
+            value
+
+            input
+            []
+            (conj result grammar-applied)
+            )
+          )
+        )
+
+      )
+    #_(recur
+      input
+      params
+
+      current-input
+      result
+      )
+    )
+  )
 
 
 (go-loop []
