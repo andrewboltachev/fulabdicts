@@ -245,8 +245,16 @@
     [
      [value port]
      (if (or (empty? input) (empty? params) await-for-changes)
-       (alts! [input-file-data-ch params-file-data-ch])
-       (alts! [input-file-data-ch params-file-data-ch] :default nil)
+       (do
+         ;(println "waiting for changes")
+         ;(println input)
+         ;(println params)
+         (alts! [input-file-data-ch params-file-data-ch])
+         )
+       (do
+         ;(println "just checking if there's something new")
+         (alts! [input-file-data-ch params-file-data-ch] :default nil)
+         )
        )
      ]
     (cond
@@ -279,11 +287,10 @@
          article (first current-input)
          [word body] article
          grammar-applied (regexpforobj/run params body)
-         grammar-applied (if (regexpforobj/is_parsing_error? grammar-applied) grammar-applied [word grammar-applied])
          ]
         (if (regexpforobj/is_parsing_error? grammar-applied)
           (do
-            (println "Error")
+            (println font/bold-red-font word "Error")
             (aprint (update-in grammar-applied [:context :tail] regexpforobj/grammar_pretty))
             (recur
               input
@@ -294,13 +301,16 @@
               true
               )
             )
-          (recur
-            input
-            value
+          (do
+            (println font/bold-black-font word "OK" font/reset-font)
+            (recur
+              input
+              params
 
-            input
-            []
-            (conj result grammar-applied)
+              (rest current-input)
+              (conj result [word grammar-applied])
+              false
+              )
             )
           )
         )
