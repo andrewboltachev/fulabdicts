@@ -6,6 +6,7 @@
     [clojure.java.io :as io]
     [clojure-watch.core :refer [start-watch]]
     [fulab.zarnidict.fulabdsl.core :as fulabdsl]
+    [regexpforobj.core :as regexpforobj]
     )
   )
 
@@ -39,6 +40,7 @@
            )
 
 
+  (put! ~'file-ch [:initial ~filename])
   (start-watch [{:path (.getParent ~'file)
                  :event-types [:create :modify
                                ;:delete
@@ -59,6 +61,8 @@
 
 (def input-file-data-ch (chan))
 (def params-file-data-ch (chan))
+
+(def result-ch (chan))
 
 (go-loop []
          (let [
@@ -100,7 +104,9 @@
         )
 
                     )
-                 (catch Throwable e (do (println e) nil))
+                 (catch Throwable e (do (println e)
+                                        [] ; XXX: empty data
+                                        ))
                  )
                ]
            (put! input-file-data-ch data)
@@ -111,22 +117,87 @@
 
 (go-loop []
          (let [
-               params (<! params-file-ch)
+               params-filename (<! params-file-ch)
+
+               data  (try
+                  (->
+                    (slurp params-filename)
+                    read-string
+                    )
+                 (catch Throwable e (do (println e)
+                                        {} ; XXX: empty grammar
+                                        ))
+                       )
                ]
+           (put! params-file-data-ch data)
            )
          (recur)
          )
 
-(go-loop [prev-input nil
+(go-loop [prev-full-input nil
+          prev-input nil
           prev-params nil
-          prev-article-no nil]
+          result []
+          ]
          (let [
-               new-input (alts! input-file-data-ch :default nil)
-               new-params (alts! params-file-data-ch :default nil)
+               not-default (partial not= :default)
+               [new-input input-port] (alts! [input-file-data-ch] :default prev-input :priority true) ; TODO probably should be one alts!
+               [new-params params-port] (alts! [params-file-data-ch] :default prev-params :priority true)
+
+               prev-full-input (if (not-default input-port) new-input prev-full-input)
+               new-input (if (not-default params-port) prev-full-input prev-input)
+
+               something-new (some not-default (hash-set input-port params-port) )
+               result (if something-new [] result)
+
+               article (first prev-input)
+               [word body] article
+               grammar-applied (regexpforobj/run new-params body)
+               grammar-applied (if (regexpforobj/is_parsing_error? grammar-applied) grammar-applied [word grammar-applied])
                ]
+           (if (empty? prev-input)
+             (do
+               (when-not (empty? result)
+                (put! result-ch result)
+                 )
+              (recur
+                nil
+                nil
+                nil
+                []
+                )
+               )
+             (if-not (regexpforobj/is_parsing_error? grammar-applied)
+               (recur
+                 prev-full-input
+                 (rest new-input)
+                 new-params
+                 (conj result grammar-applied)
+                 )
+               (do
+                 (println "Erorr")
+                 (println word)
+                 (println grammar-applied)
+                 (recur
+                   nil
+                   nil
+                   nil
+                   []
+                   )
+                 )
+               )
+             )
            )
-         (recur
+         )
+
+
+(go-loop []
+         (let [result (<! result-ch)]
+           (doseq [[word body] result]
+             (println word)
+             )
            )
+         (recur)
          )
 
 (defn -main [& [input-file params-file :as args]]

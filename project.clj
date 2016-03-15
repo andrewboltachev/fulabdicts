@@ -11,5 +11,8 @@
 
                  [regexpforobj "1.0.0-alpha2-SNAPSHOT"]
                  [fulab.zarnidict/fulabdsl "1.0.0-alpha1-SNAPSHOT"]
+
+
+                 [com.ashafa/clutch "0.4.0"]
                  ]
   :main fulabdicts.main)
