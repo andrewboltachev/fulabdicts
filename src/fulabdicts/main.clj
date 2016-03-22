@@ -12,6 +12,8 @@
     )
   )
 (use 'aprint.core)
+(require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
+
 
 (defmacro with-ns
   "Evaluates body in another namespace.  ns is either a namespace
@@ -279,7 +281,12 @@
         )
 
       (empty? current-input)
-      (println "result")
+      (let [result (map #(update-in % [1] regexpforobj/grammar_pretty) result)]
+        (println "Result")
+        (newline)
+        (-> result
+            aprint)
+        )
 
       :else
       (let
