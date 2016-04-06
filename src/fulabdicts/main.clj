@@ -15,6 +15,12 @@
 (require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
 
 
+(defn ifipp [x]
+  (do
+    (fipp x)
+    x)
+  )
+
 (defmacro with-ns
   "Evaluates body in another namespace.  ns is either a namespace
   object or a symbol.  This makes it possible to define functions in
@@ -96,6 +102,29 @@
                       )
 
 (fulabdsl/parse-fulabdsl-lines-short
+:transform-tags-fn (fn [{:keys [tag value] :as arg}]
+                     (do (println arg)
+                         (ifipp
+                     [
+                       (if (= tag "trn")
+                     (let [
+                           m1 (re-matches #"^(\d+)\.\s+$" (first value))
+                           m2 (re-matches #"^(\d+)\u0029\s+$" (first value))
+                           ]
+                     (cond
+                       (some? m1)
+                       (do (println "m1" (-> m1 second Integer.))
+                       {:tag "trn1" :value {:number (-> m1 second Integer.) :body (rest value)}}
+                           )
+                       (some? m2)
+                       {:tag "trn2" :value {:number (-> m2 second Integer.) :body (rest value)}}
+                       :else
+                        {:tag tag :value value}
+                        )
+                     )
+                        {:tag tag :value value}
+                         )
+                         ])))
         :tag-compare-fn
       #(if-not
        (or (= %1 %2) (and (= %1 "m1") (= %2 "m")))
