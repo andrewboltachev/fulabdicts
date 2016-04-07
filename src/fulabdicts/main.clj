@@ -13,6 +13,7 @@
   )
 (use 'aprint.core)
 (require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
+(require 'fulabdicts.structures.one)
 
 
 (defn ifipp [x]
@@ -170,23 +171,14 @@
          (let [
                params-filename (<! params-file-ch)
 
-               data  (try
-                       (let [s
-                  (->
-                    (slurp params-filename)
-                    read-string
-                    )]
-(eval `(with-ns 'regexpforobj.core
-  (eval ~s)
-  ))
-                         )
-                 (catch Throwable e (do (println e)
-                                        {} ; XXX: empty grammar
-                                        ))
-                       )
+               data (do
+                      (require 'fulabdicts.structures.one :reload)
+                      fulabdicts.structures.one/the-grammar
+                   )
+               
                ]
            (println "Sending grammar off the channel"
-                    ;(prn2 data)
+                    (prn2 data)
                     )
            (put! params-file-data-ch data)
            )
