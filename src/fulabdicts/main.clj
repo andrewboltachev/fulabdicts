@@ -185,75 +185,6 @@
          (recur)
          )
 
-#_(go-loop [prev-full-input nil
-          prev-input nil
-          prev-params nil
-          result []
-          ]
-         (let [
-               not-default (partial not= :default)
-               ;_ (println "Will wait for input" (empty? prev-full-input))
-               [new-input input-port] (if (empty? prev-full-input)
-                                        (alts! [input-file-data-ch]) ; TODO probably should be one alts!
-                                        (alts! [input-file-data-ch] :default prev-input :priority true)
-                                        )
-               ;_ (println "Input OK. Will wait for params" (empty? prev-params))
-               [new-params params-port] (if (empty? prev-params)
-                                          (alts! [params-file-data-ch])
-                                          (alts! [params-file-data-ch] :default prev-params :priority true)
-                                        )
-               ;_ (println "Params OK")
-
-               prev-full-input (if (not-default input-port) new-input prev-full-input)
-               new-input (if (not-default params-port) prev-full-input prev-input)
-
-               something-new (some not-default (hash-set input-port params-port))
-               result (if something-new [] result)
-
-               article (first new-input)
-               [word body] article
-               grammar-applied (regexpforobj/run new-params body)
-               grammar-applied (if (regexpforobj/is_parsing_error? grammar-applied) grammar-applied [word grammar-applied])
-               ]
-           (if (empty? new-input)
-             (do
-               (println "empty prev-input")
-               (when-not (empty? result)
-                (put! result-ch result)
-                 )
-              (recur
-                nil
-                nil
-                nil
-                []
-                )
-               )
-             (if-not (regexpforobj/is_parsing_error? grammar-applied)
-               (do
-                 (println font/bold-black-font word "OK")
-                (recur
-                  prev-full-input
-                  (rest new-input)
-                  new-params
-                  (conj result grammar-applied)
-                  )
-                 )
-               (do
-                 (println font/bold-black-font word)
-                 (println font/green-font grammar-applied font/reset-font)
-                 (recur
-                  prev-full-input
-                  (rest new-input)
-                  new-params
-                  result
-                   )
-                 )
-               )
-             )
-           )
-         )
-
-
 (go-loop
   [
    input nil
@@ -344,15 +275,10 @@
         )
 
       )
-    #_(recur
-      input
-      params
-
-      current-input
-      result
-      )
     )
   )
+
+; (aprint (grammar_pretty (Or (reduce (fn [a b] (concat a (cons (Seq [ b examples ])  (map #(Star (Seq [b %])) a) ))) [] (reverse [trn1 trn2 trn])))))
 
 
 (go-loop []
