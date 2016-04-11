@@ -26,10 +26,6 @@
                             ]))
               ]))
              ])
-      #_translation
-      #_(Seq [
-              (Char "trn")
-              ])
 
       f1 (fn [header middle body]
            (Or [
@@ -82,20 +78,6 @@
 
               examples
              )
-
-           ;; (Seq [trn examples])
-           ;; (Seq [trn2 examples])
-           ;; (Seq [trn2 (Or [examples (Star (Seq [trn examples])) ])])
-
-           ;; f2 (fn [x y e] (Seq [x (Or (cons e (Star (Seq (cons y e)))))]))
-           ;; (f2 trn1 trn2 (f2 trn2 trn [examples]))
-
-           ;; trn2 examples
-           ;; trn2 trn examples
-
-         ;; trn1
-
-
 
          ])
         )
