@@ -1,6 +1,8 @@
 (ns fulabdicts.structures.one)
 
 (use 'regexpforobj.core)
+(require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
+
 
 (println "Hello from grammar!")
 
@@ -40,7 +42,7 @@
                    ])))
                 ])
            )
-        f2 (fn [lst tail] (Or (reduce (fn [a b] (conj a (Or [(Seq [b tail])  (Star (Or a))]) )) [] (reverse lst))))
+        #_f2 #_(fn [lst tail] (Or (reduce (fn [a b] (conj a (Or [(Seq [b tail])  (Star (Or a))]) )) [] (reverse lst))))
       ]
 (Seq [
       (reduce
@@ -67,16 +69,31 @@
             ])
           ]
 
-           (f2
-             [
+           (Or
               [
-               (Char "trn1")
-               (Char "trn2")
-               (Char "trn")
-               ]
+               (Star (Seq [(Char "trn1")
+                           (Star (Seq [(Char "trn2")
+                           
+                                (Star (Or [examples
+                                            (Star (Seq [(Char "trn") examples]))
+                                            ]))
+
+                           ]))
+                           
+                           ]))
+
+               (Star (Seq [(Char "trn2")
+                           
+                           (Star (Or [examples
+                                      (Star (Seq [(Char "trn") examples]))
+                                      ]))
+
+                           ]))
+
+               (Star (Seq [(Char "trn") examples]))
               ]
 
-              examples
+              
              )
 
          ])
@@ -84,3 +101,5 @@
       ]
      ))
   )
+
+(-> the-grammar my_fold make_let grammar_pretty fipp)

@@ -211,6 +211,7 @@
          )
        )
      ]
+    (println "choose")
     (cond
       (= port input-file-data-ch)
       (recur
@@ -243,9 +244,12 @@
       :else
       (let
         [
+         _ (println
+             "will apply"
+             )
          article (first current-input)
          [word body] article
-         grammar-applied (regexpforobj/run params body)
+         grammar-applied (time (regexpforobj/run params body))
          ]
         (if (regexpforobj/is_parsing_error? grammar-applied)
           (do
