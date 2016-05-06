@@ -7,6 +7,7 @@
     [clojure-watch.core :refer [start-watch]]
     [fulab.zarnidict.fulabdsl.core :as fulabdsl]
     [regexpforobj.core :as regexpforobj]
+    [regexpforobj.main :as regexpforobj-main]
 
     [io.aviso.ansi :as font]
     )
@@ -249,6 +250,7 @@
              )
          article (first current-input)
          [word body] article
+         grammar-applied2 (time (regexpforobj-main/run2 params body))
          grammar-applied (time (regexpforobj/run params body))
          ]
         (if (regexpforobj/is_parsing_error? grammar-applied)
