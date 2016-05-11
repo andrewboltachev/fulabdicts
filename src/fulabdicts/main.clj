@@ -15,6 +15,7 @@
 (use 'aprint.core)
 (require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
 (require 'fulabdicts.structures.one)
+(require 'fulabdicts.structures.two)
 
 
 (defn ifipp [x]
@@ -173,8 +174,8 @@
                params-filename (<! params-file-ch)
 
                data (do
-                      (require 'fulabdicts.structures.one :reload)
-                      fulabdicts.structures.one/the-grammar
+                      (require 'fulabdicts.structures.two :reload)
+                      fulabdicts.structures.two/the-grammar
                    )
                
                ]
