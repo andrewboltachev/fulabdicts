@@ -250,7 +250,6 @@
              )
          article (first current-input)
          [word body] article
-         grammar-applied2 (time (regexpforobj-main/run2 params body))
          grammar-applied (time (regexpforobj/run params body))
          ]
         (if (regexpforobj/is_parsing_error? grammar-applied)
