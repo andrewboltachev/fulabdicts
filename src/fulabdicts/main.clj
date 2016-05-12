@@ -106,17 +106,21 @@
 
 (fulabdsl/parse-fulabdsl-lines-short
 :transform-tags-fn (fn [{:keys [tag value] :as arg}]
-                     (do (println arg)
-                         (ifipp
+                     (do #_(println arg)
+                         (
+                          ;ifipp
+                          identity
                      [
                        (if (= tag "trn")
                      (let [
-                           m1 (re-matches #"^(\d+)\.\s+$" (first value))
-                           m2 (re-matches #"^(\d+)\u0029\s+$" (first value))
+                           fv (first value)
+                           fvs (string? fv)
+                           m1 (if fvs (re-matches #"^(\d+)\.\s+$" fv))
+                           m2 (if fvs (re-matches #"^(\d+)\u0029\s+$" fv))
                            ]
                      (cond
                        (some? m1)
-                       (do (println "m1" (-> m1 second Integer.))
+                       (do #_(println "m1" (-> m1 second Integer.))
                        {:tag "trn1" :value {:number (-> m1 second Integer.) :body (rest value)}}
                            )
                        (some? m2)
@@ -251,7 +255,14 @@
              )
          article (first current-input)
          [word body] article
-         grammar-applied (time (regexpforobj/run params body))
+         _ (clojure.pprint/pprint
+             (vec body)
+             )
+         
+         grammar-applied 
+         (binding [regexpforobj/*regexpforobj-debug1* false]
+         (time (regexpforobj/run params body))
+           )
          ]
         (if (regexpforobj/is_parsing_error? grammar-applied)
           (do
