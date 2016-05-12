@@ -151,13 +151,18 @@
                            ]))
                      ])
 
-               (Star (Seq [(Char "trn2")
+               (Seq [
+
+               (MayBe (Char "trn") :tsar)
+
+               (Plus (Seq [(Char "trn2")
                            
                            (Or [examples
                                       (Star (Seq [(Char "trn") examples]))
                                       ])
 
                            ]))
+                     ])
 
                (Star (Seq [(Char "trn") examples]))
 

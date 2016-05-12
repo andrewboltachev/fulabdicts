@@ -126,9 +126,11 @@
                                                                                     (rest value)))}}
                            )
                        (some? m2)
+                       (do #_(println "m2" (-> m2 second Integer.))
                        {:tag "trn2" :value {:number (-> m2 second Integer.) :body (vec (concat
-                                                                                    (if-not (empty? (last m1)) [(last m1)])
+                                                                                    (if-not (empty? (last m2)) [(last m2)])
                                                                                     (rest value)))}}
+                           )
                        :else
                         {:tag tag :value value}
                         )
@@ -255,7 +257,11 @@
       (let
         [
          _ (println
-             "will apply"
+             "will apply" 
+             )
+         _ (when (regexpforobj/is_parsing_error? current-input)
+             (println font/bold-red-font "Tokenizer error" font/reset-font)
+              (aprint current-input)
              )
          article (first current-input)
          [word body] article
