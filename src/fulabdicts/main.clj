@@ -115,16 +115,20 @@
                      (let [
                            fv (first value)
                            fvs (string? fv)
-                           m1 (if fvs (re-matches #"^(\d+)\.\s+$" fv))
-                           m2 (if fvs (re-matches #"^(\d+)\u0029\s+$" fv))
+                           m1 (if fvs (re-matches #"^(\d+)\.(?: )?(.*)$" fv))
+                           m2 (if fvs (re-matches #"^(\d+)\u0029(?: )?(.*)$" fv))
                            ]
                      (cond
                        (some? m1)
                        (do #_(println "m1" (-> m1 second Integer.))
-                       {:tag "trn1" :value {:number (-> m1 second Integer.) :body (rest value)}}
+                       {:tag "trn1" :value {:number (-> m1 second Integer.) :body (vec (concat
+                                                                                    (if-not (empty? (last m1)) [(last m1)])
+                                                                                    (rest value)))}}
                            )
                        (some? m2)
-                       {:tag "trn2" :value {:number (-> m2 second Integer.) :body (rest value)}}
+                       {:tag "trn2" :value {:number (-> m2 second Integer.) :body (vec (concat
+                                                                                    (if-not (empty? (last m1)) [(last m1)])
+                                                                                    (rest value)))}}
                        :else
                         {:tag tag :value value}
                         )
@@ -150,7 +154,7 @@
                                             (contains? 
                                              #{"А." "Б."}
                                               x)
-                                            {:tag "R" :value x}
+                                            {:tag "L" :value x}
 
                                             :else
                                             x
@@ -255,9 +259,6 @@
              )
          article (first current-input)
          [word body] article
-         _ (clojure.pprint/pprint
-             (vec body)
-             )
          
          grammar-applied 
          (binding [regexpforobj/*regexpforobj-debug1* false]
@@ -266,6 +267,9 @@
          ]
         (if (regexpforobj/is_parsing_error? grammar-applied)
           (do
+            _ (clojure.pprint/pprint
+                (vec body)
+                )
             (println font/bold-red-font word "Error")
             (aprint (update-in grammar-applied [:context :tail] regexpforobj/grammar_pretty))
             (recur

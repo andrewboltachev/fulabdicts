@@ -61,7 +61,16 @@
 
 (def the-grammar
   (let [MayBe Star
+        Plus (fn [x & [p]]
+               (Seq [x (Star x)]
+                 (assoc
+                   (or p {})
+                   :plus
+                   true)
+                    )
+               )
         ref_ (Seq [
+                 (MayBe (Char "u1"))
                  (Char "ref")
                  (MayBe (Char "u"))
                  ])
@@ -118,6 +127,7 @@
           (Char "R")
           (Seq
             [
+            (MayBe (Char "pre"))
             (MayBe (Char "end"))
             (MayBe (Char "m1"))
             ])
@@ -125,18 +135,21 @@
 
            (Or
               [
-               (Star (Seq [(Char "trn1")
-(Or [examples
-                           (Star (Seq [(Char "trn2")
-                           
+               (Seq [
+                     (MayBe (Char "trn") :tsar)
+               (Plus (Seq [(Char "trn1")
+                           (Or [examples
+                             (Star (Seq [(Char "trn") examples]))
+                             (Star (Seq [(Char "trn2")
                                 (Or [examples
                                             (Star (Seq [(Char "trn") examples]))
                                             ])
-
-                           ]))
-     ])
+                                 ])
+                                   )
+                                ])
                            
                            ]))
+                     ])
 
                (Star (Seq [(Char "trn2")
                            
@@ -147,6 +160,8 @@
                            ]))
 
                (Star (Seq [(Char "trn") examples]))
+
+               (Seq [examples])
               ]
 
               
