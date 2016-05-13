@@ -18,5 +18,8 @@
                  [aprint "0.1.3"]
 
                  [com.ashafa/clutch "0.4.0"]
+                 [clj-http "2.1.0"]
+                 [org.clojure/data.json "0.2.6"]
+
                  ]
   :main fulabdicts.main)

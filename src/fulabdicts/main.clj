@@ -10,6 +10,8 @@
     [regexpforobj.main :as regexpforobj-main]
 
     [io.aviso.ansi :as font]
+
+    [clj-http.client :as client]
     )
   )
 (use 'aprint.core)
@@ -248,9 +250,7 @@
       (empty? current-input)
       (let [result (map #(update-in % [1] regexpforobj/grammar_pretty) result)]
         (println "Result")
-        (newline)
-        (-> result
-            aprint)
+        (put! result-ch result)
         )
 
       :else
@@ -310,6 +310,10 @@
 
 (go-loop []
          (let [result (<! result-ch)]
+             (client/post "http://site.com/api"
+                {:body ""
+                 :content-type :json
+                 :accept :json})
            (doseq [[word body] result]
              (println word)
              )
