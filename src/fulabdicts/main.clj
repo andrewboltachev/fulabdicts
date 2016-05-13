@@ -310,10 +310,6 @@
 
 (go-loop []
          (let [result (<! result-ch)]
-             (client/post "http://site.com/api"
-                {:body ""
-                 :content-type :json
-                 :accept :json})
            (doseq [[word body] result]
              (println word)
              )
