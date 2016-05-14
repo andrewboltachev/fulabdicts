@@ -12,10 +12,12 @@
     [io.aviso.ansi :as font]
 
     ;[clj-http.client :as client]
+    [clojure.java.jdbc :as jdbc]
     )
   )
 (use 'aprint.core)
 (require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
+(require 'fulabdicts.metadata)
 (require 'fulabdicts.tokenizers)
 (require 'fulabdicts.grammars) ; TODO: split file
 
@@ -140,7 +142,7 @@
            (println "Sending grammar off the channel"
                     (prn2 data)
                     )
-           (put! params-file-data-ch data)
+           (put! params-file-data-ch [structure-name data])
            )
          (recur)
          )
@@ -157,12 +159,13 @@
    ]
   (let
     [
+     [structure-name grammar] params
      [value port]
-     (if (or (empty? input) (empty? params) await-for-changes)
+     (if (or (empty? input) (empty? grammar) await-for-changes)
        (do
          ;(println "waiting for changes")
          ;(println input)
-         ;(println params)
+         ;(println grammar)
          (alts! [input-file-data-ch params-file-data-ch])
          )
        (do
@@ -196,7 +199,7 @@
       (let [
             ]
         ;(println "Result")
-        (put! result-ch result)
+        (put! result-ch [structure-name result])
         (recur
           input
           value
@@ -222,7 +225,7 @@
          
          grammar-applied 
          (binding [regexpforobj/*regexpforobj-debug1* false]
-         (time (regexpforobj/run params body))
+         (time (regexpforobj/run grammar body))
            )
 
          grammar-applied (if
@@ -296,25 +299,81 @@
 
 
 (go-loop []
-         (let [result (<! result-ch)
+         (let [[structure-name result] (<! result-ch)
                ]
-           (doseq [[word body] result]
-             (println word)
-             (aprint
-               (->>
-                 body
-                 (clojure.walk/postwalk
-                   (fn [x]
-                     (if (and (map? x) (fn? (:payload x)))
-                       (dissoc x :payload)
-                       x)
-                     )
-                   )
-                 ;regexpforobj/grammar_pretty
-                 )
-               )
-             (newline)
-             )
+           (Class/forName "org.postgresql.Driver") ; TODO figure out this
+           (jdbc/with-db-connection [db-spec 
+                                     ;{:connection-uri
+                                    (System/getenv "ZARNIDICT_DATABASE_URL")
+                                              ;}
+                                     ]
+             (let [m (get fulabdicts.metadata/data structure-name)
+                   _ (println font/blue-font "Creating dictionary in the DB..." font/reset-font)
+                   dt (new java.util.Date)
+                   dt-s (java.sql.Date. (.getTime dt))
+              r (jdbc/insert! db-spec :dicts_dictionary
+                              {:name (str structure-name " at " dt)
+                               :lang_in_id (:lang_in m)
+                               :lang_out_id (:lang_out m)
+                               :complete false
+                               :structure structure-name
+                               :date_added dt-s
+                               }) ;; Create
+                   dictionary (first r)
+                   _ (println dictionary)
+
+                   get-or-create-article (fn [dictionary word]
+                                           (let [existing_one
+                                                 (jdbc/query db-spec
+                                                             ["SELECT id FROM dicts_article WHERE dictionary_id = ? AND name = ?" (:id dictionary) word])
+                                                 existing_one_id (-> existing_one first :id)
+                                                 ]
+                                             (if existing_one_id
+                                               existing_one_id
+                                               (-> (jdbc/insert!
+                                                 db-spec
+                                                     :dicts_article
+                                                 {:dictionary_id (:id dictionary)
+                                                  :name word}
+                                                 ) first :id)
+                                               )
+                                               
+                                             )
+                                           )
+                   ]
+              (doseq [[word body] result]
+                (println word)
+                (let [article-id
+                  (get-or-create-article dictionary word)
+                  ]
+                  article-id
+                  (-> (jdbc/insert!
+                      db-spec
+                          :dicts_articleversion
+                      {:article_id article-id
+                       :body (prn-str body)
+                       :date_added dt-s
+                       :action true
+                       :user_id nil
+                       }
+                      ) first :id)
+                (aprint
+                  (->>
+                    body
+                    (clojure.walk/postwalk
+                      (fn [x]
+                        (if (and (map? x) (fn? (:payload x)))
+                          (dissoc x :payload)
+                          x)
+                        )
+                      )
+                    ;regexpforobj/grammar_pretty
+                    )
+                  )
+                (newline)
+                ))
+               (jdbc/update! db-spec :dicts_dictionary {:complete true} ["id = ?" (:id dictionary)]) ;; Update
+               ))
            )
          (recur)
          )
