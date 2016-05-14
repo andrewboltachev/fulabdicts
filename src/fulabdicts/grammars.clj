@@ -54,10 +54,10 @@
                             (Char "rus")
                             ]
                            (fn [x]
-                             (let [length3 (count (:value x))]
-                             {:mhr (get-in [:value 0 :value] x)
-                              :aut (when length3 (get-in [:value 0 :value] x))
-                              :rus (get-in [:value (if length3 2 1) :value] x)
+                             (let [length3 (= (count (:value x)) 3)]
+                             {:mhr (get-in x [:value 0 :payload])
+                              :aut (when length3 (get-in x [:value 1 :value 0 :payload]))
+                              :rus (get-in x [:value (if length3 2 1) :payload])
                               })
                              )
                            )
