@@ -1,5 +1,6 @@
 (ns fulabdicts.grammars)
 (use 'regexpforobj.core)
+(use 'com.rpl.specter)
 
 (def
   data
@@ -8,12 +9,37 @@
     (let [MayBe Star
           Plus (fn [x & [p]]
                 (Seq [x (Star x)]
-                  (assoc
-                    (or p {})
-                    :plus
-                    true)
+                  (comp
+                    (or p identity)
+                    (fn [x]
+                      (conj
+                        (get-in [:value 0] x)
+                        (vec (get-in [:value 1 :value] x))
+                        )
                       )
+                    )
+                     )
                 )
+          ; ...
+          Seq-of-MayBe (fn [items]
+                         (Seq
+                  (mapv (fn [item]
+                         (MayBe
+                           item
+                           (fn [{:keys [[v :as value]] :as x}]
+                             {(-> item :value keyword) v
+                              })
+                           )
+                         )
+                       items)
+                         (comp
+                           #(apply merge %)
+                           :value)
+                           )
+                           ; ...
+                           )
+
+          ; ...
           ref_ (Seq [
                   (MayBe (Char "u1"))
                   (Char "ref")
@@ -26,7 +52,16 @@
                             (Char "mhr")
                             (MayBe (Char "aut"))
                             (Char "rus")
-                            ]))
+                            ]
+                           (fn [x]
+                             (let [length3 (count (:value x))]
+                             {:mhr (get-in [:value 0 :value] x)
+                              :aut (when length3 (get-in [:value 0 :value] x))
+                              :rus (get-in [:value (if length3 2 1) :value] x)
+                              })
+                             )
+                           )
+                      :value)
           (MayBe (Seq [
                 (Char "ex")
                 ref_
@@ -34,7 +69,9 @@
                               (Char "COMMA")
                               ref_
                               ]))
-                ]))
+                ])
+                 :refs
+                 )
               ])
 
         f1 (fn [header middle body]
@@ -44,11 +81,13 @@
                     body
                     ]))
               (Star (Seq (filter some? [
-                          header
+                          (dissoc header :payload)
                           middle
                           body
                     ])))
-                  ])
+                  ]
+                (comp :value)
+                )
             )
           #_f2 #_(fn [lst tail] (Or (reduce (fn [a b] (conj a (Or [(Seq [b tail])  (Star (Or a))]) )) [] (reverse lst))))
         ]
@@ -60,9 +99,9 @@
           ;; L
             [
               (Char "L")
-              (Seq
+              (Seq-of-MayBe
                 [
-                (MayBe (Char "pre"))
+                (Char "pre")
                 ])
               ]
 
@@ -70,18 +109,19 @@
           ;; R 
           [
             (Char "R")
-            (Seq
+            (Seq-of-MayBe
               [
-              (MayBe (Char "pre"))
-              (MayBe (Char "end"))
-              (MayBe (Char "m1"))
+              (Char "pre")
+              (Char "end")
+              (Char "m1")
               ])
             ]
 
             (Or
                 [
                 (Seq [
-                      (MayBe (Char "trn") :tsar)
+                      (MayBe (Char "trn") ;:tsar
+                             )
                 (Plus (Seq [(Char "trn1")
                             (Or [examples
                               (Star (Seq [(Char "trn") examples]))
@@ -98,7 +138,8 @@
 
                 (Seq [
 
-                (MayBe (Char "trn") :tsar)
+                (MayBe (Char "trn") ;:tsar
+                       )
 
                 (Plus (Seq [(Char "trn2")
                             
@@ -115,7 +156,8 @@
                 ]
 
                 
-              :trns)
+              ;:trns
+              )
 
           ])
           )

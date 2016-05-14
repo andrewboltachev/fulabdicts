@@ -193,8 +193,9 @@
         )
 
       (empty? current-input)
-      (let [result (map #(update-in % [1] regexpforobj/grammar_pretty) result)]
-        (println "Result")
+      (let [
+            ]
+        ;(println "Result")
         (put! result-ch result)
         )
 
@@ -215,11 +216,30 @@
          (binding [regexpforobj/*regexpforobj-debug1* false]
          (time (regexpforobj/run params body))
            )
+
+         grammar-applied (if
+                           (regexpforobj/is_parsing_error?
+                             grammar-applied)
+                           grammar-applied
+                           (clojure.walk/postwalk
+                             (fn [x]
+                               (if (and (map? x) (fn? (:payload x)))
+                                 ((:payload x) x)
+                                 x
+                                 )
+                               )
+                             grammar-applied
+                             )
+                           )
+
+
          ]
         (if (regexpforobj/is_parsing_error? grammar-applied)
           (do
             _ (clojure.pprint/pprint
-                (vec body)
+                (vec
+                  body
+                  )
                 )
             (println font/bold-red-font word "Error")
             (aprint (update-in grammar-applied [:context :tail] regexpforobj/grammar_pretty))
@@ -254,9 +274,24 @@
 
 
 (go-loop []
-         (let [result (<! result-ch)]
+         (let [result (<! result-ch)
+               ]
            (doseq [[word body] result]
              (println word)
+             (aprint
+               (->>
+                 body
+                 (clojure.walk/postwalk
+                   (fn [x]
+                     (if (and (map? x) (fn? (:payload x)))
+                       (dissoc x :payload)
+                       x)
+                     )
+                   )
+                 ;regexpforobj/grammar_pretty
+                 )
+               )
+             (newline)
              )
            )
          (recur)
