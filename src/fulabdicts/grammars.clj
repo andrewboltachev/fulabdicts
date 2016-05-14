@@ -229,5 +229,25 @@
         
       )
       "rus-01"
-      (Seq [])
+      (Star
+        (Or
+          [
+           (Char "pre")
+           (Char "end")
+           (Char "m1")
+           (Char "R")
+           (Char "trn")
+           (Char "trn2")
+
+           (Char "ex")
+           (Char "ref")
+           (Char "COMMA")
+           (Char "u")
+           (Char "braces1")
+
+           (Char "i")
+
+           (Char "rus")
+           ])
+        )
    })
