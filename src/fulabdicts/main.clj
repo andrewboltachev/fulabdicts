@@ -197,6 +197,14 @@
             ]
         ;(println "Result")
         (put! result-ch result)
+        (recur
+          input
+          value
+
+          input
+          []
+          false
+          )
         )
 
       :else
