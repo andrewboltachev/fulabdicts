@@ -21,5 +21,8 @@
                  [clj-http "2.1.0"]
                  [org.clojure/data.json "0.2.6"]
 
+                 [org.clojure/java.jdbc "0.4.1"]
+                 [org.postgresql/postgresql "9.4-1201-jdbc41"]
+
                  ]
   :main fulabdicts.main)

@@ -11,13 +11,13 @@
 
     [io.aviso.ansi :as font]
 
-    [clj-http.client :as client]
+    ;[clj-http.client :as client]
     )
   )
 (use 'aprint.core)
 (require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
-(require 'fulabdicts.structures.one)
-(require 'fulabdicts.structures.two)
+(require 'fulabdicts.tokenizers)
+(require 'fulabdicts.grammars) ; TODO: split file
 
 
 (defn ifipp [x]
@@ -42,7 +42,7 @@
   (str (truncate (prn-str data) 150) "... (" (-> data class str) ")")
   )
 
-(defmacro watch-file-for-changes-depreciated [filename output-channel]
+(defmacro watch-file-for-changes-depreciated [filename output-channel & [payload]]
   `(do
   (let [~'file-ch (chan
     (sliding-buffer 1)
@@ -64,7 +64,7 @@
               (when
                   (nil? ~'v)
                   (println font/blue-font "File" (str \" ~'old-filename \") "changed" font/reset-font)
-                  (put! ~output-channel ~'old-filename)
+                  (put! ~output-channel [~'old-filename ~payload])
                 )
                )
              (recur ~'filename)
@@ -98,73 +98,19 @@
 
 (go-loop []
          (let [
-               filename (<! input-file-ch)
+               [filename structure-name] (<! input-file-ch)
             data
                  (try
-                  (->
+                  (let [data
                     (with-open [rdr (clojure.java.io/reader filename)]
                       (doall (line-seq rdr))
+                      )]
+
+                    (apply
+                      fulabdsl/parse-fulabdsl-lines-short
+                      data
+                      (get fulabdicts.tokenizers/data structure-name)
                       )
-
-(fulabdsl/parse-fulabdsl-lines-short
-:transform-tags-fn (fn [{:keys [tag value] :as arg}]
-                     (do #_(println arg)
-                         (
-                          ;ifipp
-                          identity
-                     [
-                       (if (= tag "trn")
-                     (let [
-                           fv (first value)
-                           fvs (string? fv)
-                           m1 (if fvs (re-matches #"^(\d+)\.(?: )?(.*)$" fv))
-                           m2 (if fvs (re-matches #"^(\d+)\u0029(?: )?(.*)$" fv))
-                           ]
-                     (cond
-                       (some? m1)
-                       (do #_(println "m1" (-> m1 second Integer.))
-                       {:tag "trn1" :value {:number (-> m1 second Integer.) :body (vec (concat
-                                                                                    (if-not (empty? (last m1)) [(last m1)])
-                                                                                    (rest value)))}}
-                           )
-                       (some? m2)
-                       (do #_(println "m2" (-> m2 second Integer.))
-                       {:tag "trn2" :value {:number (-> m2 second Integer.) :body (vec (concat
-                                                                                    (if-not (empty? (last m2)) [(last m2)])
-                                                                                    (rest value)))}}
-                           )
-                       :else
-                        {:tag tag :value value}
-                        )
-                     )
-                        {:tag tag :value value}
-                         )
-                         ])))
-        :tag-compare-fn
-      #(if-not
-       (or (= %1 %2) (and (= %1 "m1") (= %2 "m")))
-       {:error :tags-mismatch :context [%1 %2]}
-       )
-:line-first-level-process-fn (comp list (fn [x]
-                                          (cond
-                                            (= x ", ")
-                                            {:tag "COMMA" :value x}
-
-                                            (contains? 
-                                             (set (map (comp str char) (range (int \Ⅰ) (+ (int \Ⅰ) 16))))
-                                              x)
-                                            {:tag "R" :value x}
-
-                                            (contains? 
-                                             #{"А." "Б."}
-                                              x)
-                                            {:tag "L" :value x}
-
-                                            :else
-                                            x
-                                            )
-                                          ))
-        )
 
                     )
                  (catch Throwable e (do (println e)
@@ -183,11 +129,11 @@
 
 (go-loop []
          (let [
-               params-filename (<! params-file-ch)
+               [params-filename structure-name] (<! params-file-ch)
 
                data (do
-                      (require 'fulabdicts.structures.two :reload)
-                      fulabdicts.structures.two/the-grammar
+                      (require 'fulabdicts.grammars :reload)
+                      (get fulabdicts.grammars/data structure-name)
                    )
                
                ]
@@ -225,7 +171,6 @@
          )
        )
      ]
-    (println "choose")
     (cond
       (= port input-file-data-ch)
       (recur
@@ -317,17 +262,19 @@
          (recur)
          )
 
-(defn -main [& [input-file params-file :as args]]
+(defn -main [& [input-file structure-name :as args]]
   ; check exists (.exists (io/file "filename.txt"))
   (let [
         ]
     (watch-file-for-changes-depreciated
       input-file
       input-file-ch
+      structure-name
       )
     (watch-file-for-changes-depreciated
-      params-file
+      "src/fulabdicts/grammars.clj"
       params-file-ch
+      structure-name
       )
     )
   )
