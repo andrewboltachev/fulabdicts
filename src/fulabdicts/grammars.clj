@@ -12,10 +12,11 @@
                   (comp
                     (or p identity)
                     (fn [x]
-                      (conj
-                        (get-in [:value 0] x)
-                        (vec (get-in [:value 1 :value] x))
-                        )
+                      {:type :SeqNode
+                       :value (cons
+                        (get-in x [:value 0])
+                        (vec (get-in x [:value 1 :value]))
+                        )}
                       )
                     )
                      )
@@ -41,10 +42,14 @@
 
           ; ...
           ref_ (Seq [
-                  (MayBe (Char "u1"))
-                  (Char "ref")
-                  (MayBe (Char "u"))
-                  ])
+                  (MayBe (Char "u1") (fn [x] {:u1 x}))
+                  (Seq [(Char "ref")] (fn [x] {:ref (first x)}) )
+                  (MayBe (Char "u") (fn [x] {:u x}))
+                  ]
+                    (comp
+                           #(apply merge %)
+                           :value)
+                    )
 
         examples
           (Seq [
@@ -61,37 +66,79 @@
                               })
                              )
                            )
-                      :value)
+                      (comp
+                        #(do {:examples %})
+                        :value
+                        )
+                      )
           (MayBe (Seq [
                 (Char "ex")
                 ref_
                       (Star (Seq [
                               (Char "COMMA")
                               ref_
-                              ]))
+                              ]
+                                 #(-> % :value second)
+                                 ))
                 ])
-                 :refs
-                 )
-              ])
+                 (fn [x] {:refs
+                          (:value x)
+                          }))
+              ]
+               (comp #(apply merge %) :value))
+
+          trn-examples (Star
+                         (Seq [(Char "trn") examples]
+                              (fn [x]
+                                (merge {:trn (-> x :value first)}
+                                       (-> x :value second)
+                                 )
+                                )
+                              )
+                         (fn [x]
+                           {:type :trn
+                            :items (:value x)
+                            }
+                           )
+                         )
 
         f1 (fn [header middle body]
             (Or [
                   (Seq (filter some? [
                     middle
                     body
-                    ]))
+                    ]
+                               )
+                               (fn [x]
+                     (merge {
+                      :items (-> x :value (get 1))
+                      } (-> x :value (get 0)))
+                     )
+                       )
               (Star (Seq (filter some? [
-                          (dissoc header :payload)
+                          header
                           middle
                           body
-                    ])))
+                    ])
+                   (fn [x]
+                     (merge {:header (-> x :value (get 0) :payload)
+                      :items (-> x :value (get 2))
+                      } (-> x :value (get 1)))
+                     )
+                                 
+                         )
+                    (fn [x]
+                    {:value (:value x)
+                     :type (keyword (:value header))
+                     }
+                      )
+                    )
                   ]
                 (comp :value)
                 )
             )
           #_f2 #_(fn [lst tail] (Or (reduce (fn [a b] (conj a (Or [(Seq [b tail])  (Star (Or a))]) )) [] (reverse lst))))
         ]
-  (Seq [
         (reduce
           #(apply f1 (conj %2 %1))
           (reverse
@@ -123,18 +170,30 @@
                       (MayBe (Char "trn") ;:tsar
                              )
                 (Plus (Seq [(Char "trn1")
-                            (Or [examples
-                              (Star (Seq [(Char "trn") examples]))
+                             (Or [examples
+                              trn-examples
                               (Star (Seq [(Char "trn2")
                                   (Or [examples
-                                              (Star (Seq [(Char "trn") examples]))
-                                              ])
+                                              trn-examples
+                                              ] :value)
                                   ])
-                                    )
-                                  ])
+                                    :value)
+                                  ] :value)
                             
-                            ]))
-                      ])
+                            ]
+                           (fn [x]
+                             {:trn1 (-> x :value first :payload)
+                              :items (-> x :value second)
+                              }
+                             )
+                           ) :value)
+                      ]
+                     (fn [x]
+                       {:trn1-with-tsar (-> x :value first :value first :payload)
+                        :translations (-> x :value second)
+                        }
+                       )
+                     )
 
                 (Seq [
 
@@ -144,15 +203,21 @@
                 (Plus (Seq [(Char "trn2")
                             
                             (Or [examples
-                                        (Star (Seq [(Char "trn") examples]))
-                                        ])
+                                        trn-examples
+                                        ] :value)
 
-                            ]))
-                      ])
+                            ]) :value)
+                      ]
+                     (fn [x]
+                       {:trn2-with-tsar (-> x :value first :value first :payload)
+                        :translations (-> x :value second)
+                        }
+                       )
+                     )
 
-                (Star (Seq [(Char "trn") examples]))
+                trn-examples
 
-                (Seq [examples])
+                examples
                 ]
 
                 
@@ -161,6 +226,6 @@
 
           ])
           )
-        ]
-      ))
+        
+      )
    })

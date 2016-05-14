@@ -229,15 +229,29 @@
                            (regexpforobj/is_parsing_error?
                              grammar-applied)
                            grammar-applied
+                           (->> grammar-applied
                            (clojure.walk/postwalk
                              (fn [x]
                                (if (and (map? x) (fn? (:payload x)))
                                  ((:payload x) x)
+                                 
                                  x
-                                 )
+                                )
                                )
-                             grammar-applied
+                             
                              )
+                               (clojure.walk/postwalk
+                                 (fn [x]
+                                   (if (map? x)
+                                   (cond-> x
+                                     (= (:type x) :InputChar)
+                                     :payload
+                                     (= (:type x) :SeqNode)
+                                     :value)
+                                   x
+                                   )
+                                   ))
+                               )
                            )
 
 
