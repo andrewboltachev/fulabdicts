@@ -14,6 +14,9 @@
     ;[clj-http.client :as client]
     [clojure.java.jdbc :as jdbc]
     )
+  (:use
+    [com.rpl.specter]
+    )
   )
 (use 'aprint.core)
 (require '[fipp.edn :refer (pprint) :rename {pprint fipp}])
@@ -351,7 +354,10 @@
                       db-spec
                           :dicts_articleversion
                       {:article_id article-id
-                       :body (prn-str body)
+                       :body (prn-str (clojure.walk/postwalk
+                                        (fn [x]
+                                          (when-not (fn? x) x))
+                                        body))
                        :date_added dt-s
                        :action true
                        :user_id nil
@@ -378,19 +384,266 @@
          (recur)
          )
 
-(defn -main [& [input-file structure-name :as args]]
-  ; check exists (.exists (io/file "filename.txt"))
-  (let [
+(defn get-dictionary-by-id [db-spec dictionary-id]
+  (let [articles-result (jdbc/query db-spec ["SELECT \"dicts_article\".\"id\", \"dicts_article\".\"dictionary_id\", \"dicts_article\".\"name\" FROM \"dicts_article\" WHERE \"dicts_article\".\"dictionary_id\" = ?" dictionary-id])
+        get-article-version (fn [article-id] (first (jdbc/query db-spec ["SELECT \"dicts_articleversion\".\"id\", \"dicts_articleversion\".\"article_id\", \"dicts_articleversion\".\"body\", \"dicts_articleversion\".\"date_added\", \"dicts_articleversion\".\"user_id\", \"dicts_articleversion\".\"action\" FROM \"dicts_articleversion\" WHERE \"dicts_articleversion\".\"article_id\" = ? ORDER BY \"dicts_articleversion\".\"date_added\" DESC, \"dicts_articleversion\".\"id\" DESC LIMIT 1" article-id])))
         ]
-    (watch-file-for-changes-depreciated
-      input-file
-      input-file-ch
-      structure-name
-      )
-    (watch-file-for-changes-depreciated
-      "src/fulabdicts/grammars.clj"
-      params-file-ch
-      structure-name
-      )
+    (map
+      (fn [article]
+        (let [article-version (get-article-version (:id article))]
+        {:id (:id article-version)
+         :name (:name article)
+         :body (try
+                 (read-string (:body article-version))
+                 (catch Throwable e
+                   (do
+                     (println (:body article-version))
+                     (println e)
+                     ))
+                 )
+         }
+        ))
+      articles-result)
     )
+  )
+
+(defn -main [& args]
+  ; check exists (.exists (io/file "filename.txt"))
+  (let [num-args (partial = (count args))]
+  (cond
+    (num-args 2)
+    (let [
+          [input-file structure-name] args
+          ]
+      (watch-file-for-changes-depreciated
+        input-file
+        input-file-ch
+        structure-name
+        )
+      (watch-file-for-changes-depreciated
+        "src/fulabdicts/grammars.clj"
+        params-file-ch
+        structure-name
+        )
+      )
+    (num-args 4)
+    (do
+      (Class/forName "org.postgresql.Driver") ; TODO figure out this
+      (jdbc/with-db-connection [db-spec 
+                              (System/getenv "ZARNIDICT_DATABASE_URL")]
+                                
+    (let [
+          [dictionary-id wordlist-id hunspell-filename-base structure-name] args
+          dictionary-id (Integer/parseInt dictionary-id)
+          wordlist-id (Integer/parseInt wordlist-id)
+          dictionary (get-dictionary-by-id db-spec dictionary-id)
+          wordlist (get-dictionary-by-id db-spec wordlist-id)
+
+          hunspell (.getDictionary (dk.dren.hunspell.Hunspell/getInstance) hunspell-filename-base)
+          stems (fn [word]
+                 (apply hash-set
+                        (.stem hunspell word)
+                        )
+                 )
+          word-matches (fn [master-stems word]
+                         (not (empty? (clojure.set/intersection
+                                        master-stems
+                                        (stems word)
+                                        )))
+                        )
+          
+          trns (map (fn [article]
+               (update-in article [:body]
+                          (fn [body]
+                            ; ...
+                            (filter #(and (map? %) (contains? % :trn)) (tree-seq #(or (sequential? %) (map? %)) #((if (map? %) vals identity) %) body))
+                            )))
+
+        dictionary)
+
+          trns-match (map (fn [article]
+                            (transform [:body ALL :examples]
+                                   ; ...
+                                       (fn [examples]
+                                   (map (fn [{:keys [mhr rus aut] :as example}]
+                                                             ; ...
+                                                             (let [rus1 (apply str rus)
+                                                                   rus-words
+                                                                   (clojure.string/split rus1 #"[^а-яёА-ЯЁ\-]")
+                                                                   ]
+                                                                 (assoc example :match (apply clojure.set/union (map stems rus-words)))
+                                                                   ))
+
+                                        examples
+                                        ))
+                                   article)
+                            ) trns)
+
+          perevertysh
+          (time (doall (map
+                        (fn [x]
+                          (let [word (:name x)
+                                master-stems (stems word)
+                                ;this-word-matches (partial
+                                ;                    word-matches
+                                ;                    (stems x)
+                                ;                    )
+                                matching-examples (mapcat
+                                                    (fn [trn]
+                                                      (into []
+                                                            (comp
+                                                         (filter
+                                                           (fn [example]
+                                                             #_(when (and
+                                                                     (some? (:match example))
+                                                                     (some? master-stems)
+                                                                     )
+                                                                     (println
+                                                               (:match example)
+                                                               "vs."
+                                                               master-stems))
+                                                             (not (empty?(clojure.set/intersection
+
+                                                               (:match example)
+                                                                           master-stems
+                                                               )))
+                                                             )
+                                                           )
+                                                              )
+                                                            (mapcat identity
+                                                                    (select [:body ALL :examples] trn))
+                                                            )
+
+                                                      )
+                                                    trns-match
+                                                    )
+                                ]
+                          {:name (:name x)
+                           :body {
+                                  :original (:body x)
+                                  ;:translations translations
+                                  :examples matching-examples
+                                  }
+                           })
+                          )
+                        wordlist
+                        )))
+          ]
+      
+
+
+
+
+
+
+
+
+
+(let [m (get fulabdicts.metadata/data structure-name)
+                   _ (println font/blue-font "Creating dictionary in the DB..." font/reset-font)
+                   dt (new java.util.Date)
+                   dt-s (java.sql.Date. (.getTime dt))
+              r (jdbc/insert! db-spec :dicts_dictionary
+                              {:name (str structure-name " at " dt)
+                               :lang_in_id "rus" ; TODO
+                               :lang_out_id "mhr" ; TODO
+                               :complete false
+                               :structure structure-name
+                               :date_added dt-s
+                               }) ;; Create
+                   dictionary (first r)
+                   _ (println dictionary)
+
+                  get-existing-articles (fn [dictionary]
+                                          
+                                          (into {}
+                                                (map (fn [{:keys [id name]}]
+                                                       [name id]
+                                                       )
+                                                       (jdbc/query
+                                            db-spec
+                                            ["SELECT id FROM dicts_article WHERE dictionary_id = ?" (:id dictionary)]
+                                            ))
+                                          ))
+                   existing-articles (get-existing-articles dictionary)
+
+                   get-or-create-articles (fn [dictionary existing-articles articles]
+                                           (map (fn [article]
+                                            (let [word (:name article)
+                                                 existing_one_id (get existing-articles word)
+                                                 ]
+                                             (assoc article :id (if existing_one_id
+                                               existing_one_id
+                                               (-> (jdbc/insert!
+                                                 db-spec
+                                                     :dicts_article
+                                                 {:dictionary_id (:id dictionary)
+                                                  :name word}
+                                                 ) first :id)
+                                               ))
+                                               
+                                             )) articles)
+                                           )
+                   ]
+              (doseq [
+                      ;{:keys [name body]}
+                      series (partition 20 perevertysh)]
+                (let [articles (get-or-create-articles
+                                 dictionary existing-articles series)]
+                  (time (-> (jdbc/insert-multi!
+                      db-spec
+                          :dicts_articleversion
+                      (map (fn [article]
+                             {:article_id (:id article)
+                       :body (prn-str (clojure.walk/postwalk
+                                        (fn [x]
+                                          (when-not (fn? x) x))
+                                        (:body article)))
+                       :date_added dt-s
+                       :action true
+                       :user_id nil
+                       }
+                      )
+                           articles
+                           ))))
+                  (doall (map println (map :name series)))
+                #_(aprint
+                  (->>
+                    body
+                    (clojure.walk/postwalk
+                      (fn [x]
+                        (if (and (map? x) (fn? (:payload x)))
+                          (dissoc x :payload)
+                          x)
+                        )
+                      )
+                    ;regexpforobj/grammar_pretty
+                    )
+                  )
+                (newline)
+                ))
+               (jdbc/update! db-spec :dicts_dictionary {:complete true} ["id = ?" (:id dictionary)]) ;; Update
+               )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      )))
+      :else
+      (println "Enter arguments to do something")
+     ))
   )

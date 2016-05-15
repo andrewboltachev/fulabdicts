@@ -22,8 +22,10 @@
                  [org.clojure/data.json "0.2.6"]
                  [com.rpl/specter "0.10.0"]
 
-                 [org.clojure/java.jdbc "0.4.1"]
+                 [org.clojure/java.jdbc "0.6.1"]
                  [org.postgresql/postgresql "9.4-1201-jdbc41"]
+
+                 [dk.dren/hunspell "1.3.2-SNAPSHOT"]
 
                  ]
   :main fulabdicts.main)
