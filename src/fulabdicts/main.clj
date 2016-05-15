@@ -483,7 +483,8 @@
 
           path0 (comp-paths :body ALL :examples)
 
-          trns-match (map (fn [article]
+          ;trns-match
+          #_(map (fn [article]
                             (transform path0
                                    ; ...
                                        (fn [examples]
@@ -526,7 +527,7 @@
 
           _ (println "words1")
           words1 (time (r/fold
-                   (partial merge-with concat)
+                   (partial merge-with #(reduce conj (vec %1) %2))
                    examples1
                    ))
 
@@ -535,7 +536,7 @@
           _ (println (-> words1 vals first))
 
           perevertysh
-          [] #_(time (doall (pmap
+          (time (doall (pmap
                         (fn [x]
                           (let [word (:name x)
                                 master-stems (stems word)
@@ -544,36 +545,16 @@
                                 ;                    (stems x)
                                 ;                    )
                                 matching-examples (time (do
-                                                       (println "matching examples" word)
-                                                       (doall (mapcat
-                                                    (fn [trn]
-                                                      (doall (into []
-                                                            (comp
-                                                         (filter
-                                                           (fn [example]
-                                                             #_(when (and
-                                                                     (some? (:match example))
-                                                                     (some? master-stems)
-                                                                     )
-                                                                     (println
-                                                               (:match example)
-                                                               "vs."
-                                                               master-stems))
-                                                             (not (empty?(clojure.set/intersection
-
-                                                               (:match example)
-                                                                           master-stems
-                                                               )))
-                                                             )
-                                                           )
-                                                              )
-                                                            (doall (mapcat identity
-                                                                    (doall (select path1 trn))))
-                                                            ))
-
-                                                      )
-                                                    trns-match
-                                                    ))))
+                                                       (put! debug-ch (str "matching examples " word))
+                                                       (doall
+                                                         (into
+                                                           []
+                                                           (mapcat (fn [stem]
+                                                                     (get words1 stem)
+                                                                     ))
+                                                           master-stems
+                                                         )
+                                                         )))
                                 ]
                           {:name (:name x)
                            :body {
