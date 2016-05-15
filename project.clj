@@ -26,6 +26,7 @@
                  [org.postgresql/postgresql "9.4-1201-jdbc41"]
 
                  [dk.dren/hunspell "1.3.2-SNAPSHOT"]
+                 [net.mikera/core.matrix "0.52.0"]
 
                  ]
   :main fulabdicts.main)

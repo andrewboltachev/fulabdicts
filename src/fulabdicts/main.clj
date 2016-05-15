@@ -13,6 +13,7 @@
 
     ;[clj-http.client :as client]
     [clojure.java.jdbc :as jdbc]
+    [clojure.core.reducers :as r]
     )
   (:use
     [com.rpl.specter]
@@ -407,6 +408,24 @@
     )
   )
 
+(def debug-ch (chan 10))
+
+(require 'clojure.core.matrix)
+
+(go-loop [[color :as colors] [
+                              font/red-font
+                              font/blue-font
+                              font/green-font
+                              ]]
+         (let [msg (<! debug-ch)]
+           (println color msg font/reset-font) 
+           (newline)
+           (recur
+             (clojure.core.matrix/rotate colors 0 1)
+             )
+           )
+         )
+
 (defn -main [& args]
   ; check exists (.exists (io/file "filename.txt"))
   (let [num-args (partial = (count args))]
@@ -452,17 +471,20 @@
                                         )))
                         )
           
-          trns (map (fn [article]
+          _ (println "trns")
+          trns (time (doall (map (fn [article]
                (update-in article [:body]
                           (fn [body]
                             ; ...
-                            (filter #(and (map? %) (contains? % :trn)) (tree-seq #(or (sequential? %) (map? %)) #((if (map? %) vals identity) %) body))
+                            (doall (filter #(and (map? %) (contains? % :trn)) (tree-seq #(or (sequential? %) (map? %)) #((if (map? %) vals identity) %) body)))
                             )))
 
-        dictionary)
+        dictionary)))
+
+          path0 (comp-paths :body ALL :examples)
 
           trns-match (map (fn [article]
-                            (transform [:body ALL :examples]
+                            (transform path0
                                    ; ...
                                        (fn [examples]
                                    (map (fn [{:keys [mhr rus aut] :as example}]
@@ -479,8 +501,41 @@
                                    article)
                             ) trns)
 
+          path1 (comp-paths :body ALL :examples)
+          path2 (comp-paths ALL :body ALL :examples ALL)
+
+          examples1 (time (doall (pmap
+                     (fn [{:keys [mhr rus aut] :as example}]
+                            ; ...
+                            (let [rus1 (apply str rus)
+                                  rus-words
+                                  (clojure.string/split rus1 #"[^а-яёА-ЯЁ\-]")
+                                  ]
+                              ;(put! debug-ch example)
+                              (zipmap
+                                (apply clojure.set/union (map stems rus-words))
+                                (repeat [example])
+                                )
+                              ))
+                     (select path2 trns)
+                     )))
+
+
+          _ (println "examples1" (time (count examples1)))
+          ;_ (println (take 5 examples1))
+
+          _ (println "words1")
+          words1 (time (r/fold
+                   (partial merge-with concat)
+                   examples1
+                   ))
+
+          _ (println (count words1))
+          _ (println (-> words1 keys first))
+          _ (println (-> words1 vals first))
+
           perevertysh
-          (time (doall (map
+          [] #_(time (doall (pmap
                         (fn [x]
                           (let [word (:name x)
                                 master-stems (stems word)
@@ -488,9 +543,11 @@
                                 ;                    word-matches
                                 ;                    (stems x)
                                 ;                    )
-                                matching-examples (mapcat
+                                matching-examples (time (do
+                                                       (println "matching examples" word)
+                                                       (doall (mapcat
                                                     (fn [trn]
-                                                      (into []
+                                                      (doall (into []
                                                             (comp
                                                          (filter
                                                            (fn [example]
@@ -510,13 +567,13 @@
                                                              )
                                                            )
                                                               )
-                                                            (mapcat identity
-                                                                    (select [:body ALL :examples] trn))
-                                                            )
+                                                            (doall (mapcat identity
+                                                                    (doall (select path1 trn))))
+                                                            ))
 
                                                       )
                                                     trns-match
-                                                    )
+                                                    ))))
                                 ]
                           {:name (:name x)
                            :body {
@@ -587,7 +644,7 @@
                    ]
               (doseq [
                       ;{:keys [name body]}
-                      series (partition 20 perevertysh)]
+                      series (partition 20 20 [] perevertysh)]
                 (let [articles (get-or-create-articles
                                  dictionary existing-articles series)]
                   (time (-> (jdbc/insert-multi!
