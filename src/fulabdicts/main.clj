@@ -236,7 +236,7 @@
                            (regexpforobj/is_parsing_error?
                              grammar-applied)
                            grammar-applied
-                           (->> grammar-applied
+                           (let [r 
                            (clojure.walk/postwalk
                              (fn [x]
                                (if (and (map? x) (fn? (:payload x)))
@@ -246,8 +246,9 @@
                                 )
                                )
                              
-                             )
-                               (clojure.walk/postwalk
+                              grammar-applied)]
+                               (if (:clean-grammar (get fulabdicts.metadata/data structure-name))
+                                 (clojure.walk/postwalk
                                  (fn [x]
                                    (if (map? x)
                                    (cond-> x
@@ -257,7 +258,7 @@
                                      :value)
                                    x
                                    )
-                                   ))
+                                   ) r) r)
                                )
                            )
 

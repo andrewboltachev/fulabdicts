@@ -6,6 +6,8 @@
    {
     :lang_in "mhr"
     :lang_out "rus"
+
+    :clean-grammar true
     }
    "rus-01"
    {
