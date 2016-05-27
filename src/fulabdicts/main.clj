@@ -136,7 +136,7 @@
 
 (go-loop []
          (let [
-               [params-filename {:keys [] :as options}] (<! params-file-ch)
+               [params-filename {:keys [structure-name] :as options}] (<! params-file-ch)
 
                data (do
                       (require 'fulabdicts.grammars :reload)
@@ -310,6 +310,7 @@
 
 (go-loop []
          (let [[{:keys [structure-name] :as options} result] (<! result-ch)
+               folding (-> options :cli-options :no-folding)
                ]
            (Class/forName "org.postgresql.Driver") ; TODO figure out this
            (jdbc/with-db-connection [db-spec 
@@ -328,6 +329,7 @@
                                :complete false
                                :structure structure-name
                                :date_added dt-s
+                               :folding folding
                                }) ;; Create
                    dictionary (first r)
                    _ (println dictionary)
