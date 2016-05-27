@@ -370,7 +370,7 @@
                        :date_added dt-s
                        :action true
                        :user_id nil
-                       :folding folding
+                       :folding (some? folding)
                        }
                       ) first :id)
                 (aprint
