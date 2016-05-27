@@ -14,6 +14,7 @@
     ;[clj-http.client :as client]
     [clojure.java.jdbc :as jdbc]
     [clojure.core.reducers :as r]
+    [clojure.tools.cli :refer [parse-opts]]
     )
   (:use
     [com.rpl.specter]
@@ -104,7 +105,7 @@
 
 (go-loop []
          (let [
-               [filename structure-name] (<! input-file-ch)
+               [filename {:keys [structure-name] :as options}] (<! input-file-ch)
             data
                  (try
                   (let [data
@@ -135,7 +136,7 @@
 
 (go-loop []
          (let [
-               [params-filename structure-name] (<! params-file-ch)
+               [params-filename {:keys [] :as options}] (<! params-file-ch)
 
                data (do
                       (require 'fulabdicts.grammars :reload)
@@ -146,7 +147,7 @@
            (println "Sending grammar off the channel"
                     (prn2 data)
                     )
-           (put! params-file-data-ch [structure-name data])
+           (put! params-file-data-ch [options data])
            )
          (recur)
          )
@@ -163,7 +164,8 @@
    ]
   (let
     [
-     [structure-name grammar] params
+     [{:keys [structure-name] :as options} grammar] params
+     folding (not (-> options :cli-options :no-folding))
      [value port]
      (if (or (empty? input) (empty? grammar) await-for-changes)
        (do
@@ -203,7 +205,7 @@
       (let [
             ]
         ;(println "Result")
-        (put! result-ch [structure-name result])
+        (put! result-ch [options result])
         (recur
           input
           value
@@ -236,7 +238,8 @@
                            (regexpforobj/is_parsing_error?
                              grammar-applied)
                            grammar-applied
-                           (let [r 
+                           (if folding
+                             (let [r 
                            (clojure.walk/postwalk
                              (fn [x]
                                (if (and (map? x) (fn? (:payload x)))
@@ -260,6 +263,8 @@
                                    )
                                    ) r) r)
                                )
+                             grammar-applied
+                             )
                            )
 
 
@@ -304,7 +309,7 @@
 
 
 (go-loop []
-         (let [[structure-name result] (<! result-ch)
+         (let [[{:keys [structure-name] :as options} result] (<! result-ch)
                ]
            (Class/forName "org.postgresql.Driver") ; TODO figure out this
            (jdbc/with-db-connection [db-spec 
@@ -429,7 +434,15 @@
 
 (defn -main [& args]
   ; check exists (.exists (io/file "filename.txt"))
-  (let [num-args (partial = (count args))]
+  (let [
+        cli-options [[
+                      nil "--no-folding"
+                      ]]
+        opts-map (parse-opts args cli-options)
+        args (:arguments opts-map)
+        _ (prn opts-map)
+        num-args (partial = (count args))
+        ]
   (cond
     (num-args 2)
     (let [
@@ -438,12 +451,14 @@
       (watch-file-for-changes-depreciated
         input-file
         input-file-ch
-        structure-name
+        {:structure-name structure-name
+         :cli-options opts-map}
         )
       (watch-file-for-changes-depreciated
         "src/fulabdicts/grammars.clj"
         params-file-ch
-        structure-name
+        {:structure-name structure-name
+         :cli-options opts-map}
         )
       )
     (num-args 4)
