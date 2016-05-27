@@ -329,7 +329,6 @@
                                :complete false
                                :structure structure-name
                                :date_added dt-s
-                               :folding folding
                                }) ;; Create
                    dictionary (first r)
                    _ (println dictionary)
@@ -346,7 +345,8 @@
                                                  db-spec
                                                      :dicts_article
                                                  {:dictionary_id (:id dictionary)
-                                                  :name word}
+                                                  :name word
+                                                  }
                                                  ) first :id)
                                                )
                                                
@@ -370,6 +370,7 @@
                        :date_added dt-s
                        :action true
                        :user_id nil
+                       :folding folding
                        }
                       ) first :id)
                 (aprint
