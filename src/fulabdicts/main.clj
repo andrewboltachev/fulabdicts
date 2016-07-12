@@ -659,6 +659,7 @@
                        :date_added dt-s
                        :action true
                        :user_id nil
+                       :folding true
                        }
                       )
                            articles
