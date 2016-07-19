@@ -96,9 +96,11 @@
   )
 
 (def input-file-ch (chan))
+(def tokenizer-file-ch (chan))
 (def params-file-ch (chan))
 
 (def input-file-data-ch (chan))
+(def tokenizer-data-ch (chan))
 (def params-file-data-ch (chan))
 
 (def result-ch (chan))
@@ -129,11 +131,86 @@
            (println "Sending data off the channel"
                     ;(prn2 data)
                     )
-           (put! input-file-data-ch data)
+           (put! tokenizer-data-ch data)
            )
          (recur)
          )
 
+(go-loop
+  [
+   input nil
+   params nil
+
+   await-for-changes false
+   ]
+  (let
+    [
+     [value port]
+     (if (or (empty? input) (empty? grammar) await-for-changes)
+       (do
+         ;(println "waiting for changes")
+         ;(println input)
+         ;(println grammar)
+         (alts! [tokenizer-file-ch tokenizer-data-ch])
+         )
+       (do
+         ;(println "just checking if there's something new")
+         (alts! [tokenizer-file-ch tokenizer-data-ch] :default nil)
+         )
+       )
+     ]
+    (cond
+      (= port tokenizer-file-ch)
+      ;
+      (do
+        (println "Parsing tokenized data...")
+        (recur
+          value
+          params
+          false
+          )
+        )
+
+      (= port tokenizer-data-ch)
+      ;
+      (do
+        (recur
+          input
+          value
+          false
+          )
+        )
+
+      :else
+      (do
+        (println "Tokenizing and sending data off the ch...")
+        (let [result
+              (try
+                (apply fulabdsl/parse-fulabdsl-lines-short input params)
+                (catch Throwable e {:error :tokenizer-runtime
+                                    :context (prn-str e)})
+                )
+              ]
+          (if
+            (regexpforobj/is_parsing_error? result)
+            (do
+              (println font/bold-red-font "Tokenizer error" font/reset-font)
+              (prn result)
+              (newline)
+              )
+            (put! input-file-ch result)
+            )
+          )
+        (recur
+          input
+          params
+          true
+          )
+        )
+
+    )
+  )
+  )
 
 (go-loop []
          (let [
@@ -455,6 +532,12 @@
       (watch-file-for-changes-depreciated
         input-file
         input-file-ch
+        {:structure-name structure-name
+         :cli-options opts-map}
+        )
+      (watch-file-for-changes-depreciated
+        "src/fulabdicts/tokenizers.clj"
+        tokenizer-file-ch
         {:structure-name structure-name
          :cli-options opts-map}
         )
