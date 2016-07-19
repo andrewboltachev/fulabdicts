@@ -113,11 +113,12 @@
                       (doall (line-seq rdr))
                       )]
 
-                    (apply
+                    #_(apply
                       fulabdsl/parse-fulabdsl-lines-short
                       data
                       (get fulabdicts.tokenizers/data structure-name)
                       )
+                    data
 
                     )
                  (catch Throwable e (do (println e)
