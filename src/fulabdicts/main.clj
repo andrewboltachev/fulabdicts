@@ -301,14 +301,26 @@
       (let [
             ]
         ;(println "Result")
-        (put! result-ch [options result])
-        (recur
-          input
-          value
+        (if (-> options :cli-options :no-result)
+          (recur
+            input
+            value
 
-          input
-          []
-          false
+            []
+            []
+            true
+            )
+          (do
+            (put! result-ch [options result])
+            (recur
+              input
+              value
+
+              input
+              []
+              false
+              )
+            )
           )
         )
 
@@ -536,6 +548,9 @@
   (let [
         cli-options [[
                       nil "--no-folding"
+                      ]
+                     [
+                      nil "--no-result"
                       ]]
         opts-map (parse-opts args cli-options)
         args (:arguments opts-map)

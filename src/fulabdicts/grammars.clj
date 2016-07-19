@@ -254,7 +254,14 @@
       (Star
         (Or
           [
+           (Char "i")
            (Char "pre")
+           (Char "m1")
+           (Char "R")
+           (Char "trn2")
+           (Char "udm")
+           (Char "rus")
+           (Char "trn")
            ])
         )
    })
