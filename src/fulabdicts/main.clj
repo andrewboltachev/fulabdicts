@@ -46,7 +46,7 @@
   (apply str (take n s)))
 
 (defn prn2 [data]
-  (str (truncate (prn-str data) 150) "... (" (-> data class str) ")")
+  (str (truncate (prn-str data) 350) "... (" (-> data class str) ")")
   )
 
 (defmacro watch-file-for-changes-depreciated [filename output-channel & [payload]]
@@ -128,10 +128,10 @@
                                         ))
                  )
                ]
-           (println "Sending data off the channel"
+           (println "Sending data off the channel tokenizer-data-ch"
                     ;(prn2 data)
                     )
-           (put! tokenizer-data-ch data)
+           (put! tokenizer-data-ch {:data data :options options})
            )
          (recur)
          )
@@ -146,7 +146,7 @@
   (let
     [
      [value port]
-     (if (or (empty? input) (empty? grammar) await-for-changes)
+     (if (or (empty? input) (empty? params) await-for-changes)
        (do
          ;(println "waiting for changes")
          ;(println input)
@@ -160,7 +160,7 @@
        )
      ]
     (cond
-      (= port tokenizer-file-ch)
+      (= port tokenizer-data-ch)
       ;
       (do
         (println "Parsing tokenized data...")
@@ -171,34 +171,52 @@
           )
         )
 
-      (= port tokenizer-data-ch)
+      (= port tokenizer-file-ch)
       ;
       (do
-        (recur
-          input
-          value
-          false
+        (let [ _ (println "structure is..." (-> value second :structure-name))
+             
+              structure-name (-> value second :structure-name)
+               data (do
+                      (require 'fulabdicts.tokenizers :reload)
+                      (println "Structures are" (keys fulabdicts.tokenizers/data))
+                      (get fulabdicts.tokenizers/data structure-name)
+                   )]
+          (recur
+            input
+            data
+            false
+            )
           )
         )
 
       :else
       (do
         (println "Tokenizing and sending data off the ch...")
-        (let [result
+        (let [;_ (println "So, we will try:")
+
+              ;_ (println "data is")
+              ;_ (println (prn2 (:data input)))
+              
+              
+              _ (println "params are")
+              _ (println (prn2 params))
+              result
               (try
-                (apply fulabdsl/parse-fulabdsl-lines-short input params)
+                (apply fulabdsl/parse-fulabdsl-lines-short (:data input) params)
                 (catch Throwable e {:error :tokenizer-runtime
                                     :context (prn-str e)})
                 )
               ]
+          ;(println "Result is" result)
           (if
             (regexpforobj/is_parsing_error? result)
             (do
               (println font/bold-red-font "Tokenizer error" font/reset-font)
-              (prn result)
+              (println (prn2 result))
               (newline)
               )
-            (put! input-file-ch result)
+            (put! input-file-data-ch result)
             )
           )
         (recur
@@ -223,7 +241,7 @@
                
                ]
            (println "Sending grammar off the channel"
-                    (prn2 data)
+                    ;(prn2 data)
                     )
            (put! params-file-data-ch [options data])
            )

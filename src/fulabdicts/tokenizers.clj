@@ -165,5 +165,24 @@
        (or (= %1 %2) (and (= %1 "m1") (= %2 "m")))
        {:error :tags-mismatch :context [%1 %2]}
        )
+:line-first-level-process-fn (comp list (fn [x]
+                                          (cond
+                                            (= x ", ")
+                                            {:tag "COMMA" :value x}
+
+                                            (contains? 
+                                             (set (map (comp str char) (range (int \Ⅰ) (+ (int \Ⅰ) 16))))
+                                              x)
+                                            {:tag "R" :value x}
+
+                                            (contains? 
+                                             #{"А." "Б."}
+                                              x)
+                                            {:tag "L" :value x}
+
+                                            :else
+                                            x
+                                            )
+                                          ))
     ]
    })
