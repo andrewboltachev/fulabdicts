@@ -261,7 +261,7 @@
   (let
     [
      [{:keys [structure-name] :as options} grammar] params
-     folding (not (-> options :cli-options :no-folding))
+     folding (not (-> options :cli-options :options :no-folding))
      [value port]
      (if (or (empty? input) (empty? grammar) await-for-changes)
        (do
@@ -301,16 +301,20 @@
       (let [
             ]
         ;(println "Result")
-        (if (-> options :cli-options :no-result)
-          (recur
-            input
-            value
+        (if (-> options :cli-options :options :no-result)
+          (do
+            (println "No result, returning back")
+            (recur
+              input
+              value
 
-            []
-            []
-            true
+              []
+              []
+              true
+              )
             )
           (do
+            (println "Result, sending to channel")
             (put! result-ch [options result])
             (recur
               input
