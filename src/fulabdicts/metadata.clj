@@ -14,4 +14,9 @@
     :lang_in "rus"
     :lang_out nil
     }
+   "udm-rus-01"
+   {
+    :lang_in "udm"
+    :lang_out "rus"
+    }
    })

@@ -250,4 +250,11 @@
            (Char "rus")
            ])
         )
+      "udm-rus-01"
+      (Star
+        (Or
+          [
+           (Char "pre")
+           ])
+        )
    })
