@@ -251,7 +251,7 @@
            ])
         )
       "udm-rus-01"
-      (Star
+      #_(Star
         (Or
           [
            (Char "i")
@@ -264,4 +264,35 @@
            (Char "trn")
            ])
         )
+        (let [examples (Star (Seq [
+                                              (Char "udm")
+                                              (Char "rus")
+                                              ]))
+              
+              s1 (fn [h x]
+                   (let [h (if (sequential? h) h [h])]
+                   (Or [
+                        x
+                        (Star (Seq (conj h x)))
+                        ])
+                   ))]
+          
+             (s1
+               [(Char "R")]
+                (Star (Seq [
+                            (MayBe (Char "pre"))
+                            (MayBe (Char "m1"))
+                            (Or [
+                                (Star (Seq [
+                                  (Char "trn2")
+                                  examples
+                                  ]))
+                                  (Seq [(Or [(Char "trn") (Char "i")])
+                                 examples
+                                        ]
+                                       examples
+                                       )
+                                ])
+                            ]))
+              ))
    })
