@@ -238,7 +238,9 @@
                  (Char "pre")
                  (Char "end")
                  (Seq [
-                       (Char "L")])
+                       (Char "L")
+                       (Char "pre")
+                       ])
                  (Seq [
                        (Char "R")
                        (MayBe (Char "end"))
@@ -250,7 +252,7 @@
                  (Char "trn2")
                  (Seq [(Char "mhr") (MayBe (Char "aut")) (Char "rus")])
                  (Seq [(Char "ex")
-                       (Star
+                       (Plus
                          (Seq [
                                refseq1
                                (Star (Seq [
