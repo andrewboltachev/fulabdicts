@@ -7,7 +7,7 @@
   {
    "mhr-rus-01"
     (let [MayBe Star
-          Plus (fn [x & [p]]
+          #_Plus #_(fn [x & [p]]
                 (Seq [x (Star x)]
                   (comp
                     (or p identity)
@@ -228,6 +228,39 @@
           )
         
       )
+      "mhr-rus-02"
+      (let [refseq1 (Seq [
+                          (MayBe (Char "u1"))
+                          (Char "ref")
+                          (MayBe (Char "u"))
+                          ])]
+      (Star (Or [
+                 (Char "pre")
+                 (Char "end")
+                 (Seq [
+                       (Char "L")])
+                 (Seq [
+                       (Char "R")
+                       (MayBe (Char "end"))
+                       (MayBe (Char "m1"))
+                       ])
+                 (Char "m1")
+                 (Char "trn")
+                 (Char "trn1")
+                 (Char "trn2")
+                 (Seq [(Char "mhr") (MayBe (Char "aut")) (Char "rus")])
+                 (Seq [(Char "ex")
+                       (Star
+                         (Seq [
+                               refseq1
+                               (Star (Seq [
+                                           (Char "COMMA")
+                                           refseq1
+                                      ]))
+                               ])
+                         )
+                       ])
+                 ])))
       "rus-01"
       (Star
         (Or

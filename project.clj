@@ -9,7 +9,7 @@
                  [fipp "0.5.2"]
                  [clojure-watch "0.1.11"]
 
-                 [regexpforobj "1.0.0-alpha2-SNAPSHOT"]
+                 [regexpforobj "1.0.0-alpha3-SNAPSHOT"]
                  [fulab.zarnidict/fulabdsl "1.0.0-alpha1-SNAPSHOT"]
 
 

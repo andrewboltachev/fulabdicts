@@ -1,10 +1,8 @@
 (ns fulabdicts.tokenizers)
 
-(def
-  data
-  {
-   "mhr-rus-01"
-   [
+
+(def mhr-rus-01-tokenizer
+[
 :transform-tags-fn (fn [{:keys [tag value] :as arg}]
                      (do #_(println arg)
                          (
@@ -62,7 +60,17 @@
                                             x
                                             )
                                           ))
-    ]
+    ])
+
+(def
+  data
+  {
+   "mhr-rus-01"
+   mhr-rus-01-tokenizer
+   
+   "mhr-rus-02"
+   mhr-rus-01-tokenizer
+   
    "rus-01" [
         :tag-compare-fn
       #(if-not
