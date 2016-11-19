@@ -343,7 +343,7 @@
          
          grammar-applied 
          (binding [regexpforobj/*regexpforobj-debug1* false]
-         (time (regexpforobj/run grammar body))
+         (time (regexpforobj/run1 grammar body))
            )
 
          grammar-applied (if
