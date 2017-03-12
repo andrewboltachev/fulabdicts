@@ -229,7 +229,7 @@
         
       )
       "mhr-rus-02"
-      (let [first-char (fn [{:keys [value]}] (-> value first :value))
+      (let [first-char (fn [{:keys [value]}] (-> value first :payload))
             refseq1 (Seq [
                           (MayBe (Char "u1"))
                           (Char "ref")
@@ -245,17 +245,17 @@
                        (Char "pre")
                        ] {:type :L
                           :fn (fn [{:keys [value]}]
-                                {:L (get-in value [0 :value])
-                                 :pre (get-in value [1 :value])})})
+                                {:L (get-in value [0 :payload])
+                                 :pre (get-in value [1 :payload])})})
                  (Seq [
                        (Char "R")
                        (MayBe (Char "end"))
                        (MayBe (Char "m1"))
                        ] {:type :R
                           :fn (fn [{:keys [value]}]
-                                {:R (get-in value [0 :value])
-                                 :end (get-in value [1 :value 0 :value])
-                                 :m1 (get-in value [2 :value 0 :value])})})
+                                {:R (get-in value [0 :payload])
+                                 :end (get-in value [1 :value 0 :payload])
+                                 :m1 (get-in value [2 :value 0 :payload])})})
                  (Seq [(Char "m1")] {:type :m1 :fn first-char})
                  (Seq [(Char "trn")] {:type :trn :fn first-char})
                  (Seq [(Char "trn1")] {:type :trn1 :fn first-char})
@@ -263,9 +263,9 @@
                  (Seq [(Char "mhr") (MayBe (Char "aut")) (Char "rus")]
                       {:type :example
                        :fn (fn [{:keys [value]}]
-                             {:lang1 (:value (filter #(= (:value %) "mhr") value))
-                              :aut (:value (first (:value (filter #(= (:value %) "aut") value))))
-                              :lang2 (:value (filter #(= (:value %) "rus") value))
+                             {:lang1 (:payload (filter #(= (:value %) "mhr") value))
+                              :aut (:payload (first (:value (filter #(= (:value %) "aut") value))))
+                              :lang2 (:payload (filter #(= (:value %) "rus") value))
                               :phraseologism false
                               }
                              )})
