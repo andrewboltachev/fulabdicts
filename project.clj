@@ -29,6 +29,5 @@
                  [net.mikera/core.matrix "0.52.0"]
                  [org.clojure/tools.cli "0.3.5"]
 
-
                  ]
   :main fulabdicts.main)

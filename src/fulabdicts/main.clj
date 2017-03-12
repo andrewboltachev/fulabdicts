@@ -262,6 +262,7 @@
     [
      [{:keys [structure-name] :as options} grammar] params
      folding (not (-> options :cli-options :options :no-folding))
+     payloadfn (-> options :cli-options :options :payloadfn)
      [value port]
      (if (or (empty? input) (empty? grammar) await-for-changes)
        (do
@@ -350,7 +351,13 @@
                            (regexpforobj/is_parsing_error?
                              grammar-applied)
                            grammar-applied
-                           (if folding
+                           (cond
+                             payloadfn
+                             (do
+                               (println "APPLYING payload-fn")
+                             (regexpforobj/apply-payload-fn grammar-applied))
+
+                             folding
                              (let [r 
                            (clojure.walk/postwalk
                              (fn [x]
@@ -375,6 +382,7 @@
                                    )
                                    ) r) r)
                                )
+                             :else
                              grammar-applied
                              )
                            )
@@ -551,6 +559,9 @@
   ; check exists (.exists (io/file "filename.txt"))
   (let [
         cli-options [[
+                      nil "--payloadfn"
+                      ]
+                     [
                       nil "--no-folding"
                       ]
                      [

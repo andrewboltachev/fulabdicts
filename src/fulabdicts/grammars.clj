@@ -6,7 +6,7 @@
   data
   {
    "mhr-rus-01"
-    (let [MayBe Star
+    (let [;MayBe Star
           #_Plus #_(fn [x & [p]]
                 (Seq [x (Star x)]
                   (comp
@@ -229,28 +229,46 @@
         
       )
       "mhr-rus-02"
-      (let [refseq1 (Seq [
+      (let [first-char (fn [{:keys [value]}] (-> value first :value))
+            refseq1 (Seq [
                           (MayBe (Char "u1"))
                           (Char "ref")
                           (MayBe (Char "u"))
                           ])]
       (Star (Or [
-                 (Char "pre")
-                 (Char "end")
+                 (Seq [(Char "pre")] {:type :pre
+                                      :fn first-char})
+                 (Seq [(Char "end")] {:type :end
+                                      :fn first-char})
                  (Seq [
                        (Char "L")
                        (Char "pre")
-                       ])
+                       ] {:type :L
+                          :fn (fn [{:keys [value]}]
+                                {:L (get-in value [0 :value])
+                                 :pre (get-in value [1 :value])})})
                  (Seq [
                        (Char "R")
                        (MayBe (Char "end"))
                        (MayBe (Char "m1"))
-                       ])
-                 (Char "m1")
-                 (Char "trn")
-                 (Char "trn1")
-                 (Char "trn2")
-                 (Seq [(Char "mhr") (MayBe (Char "aut")) (Char "rus")])
+                       ] {:type :R
+                          :fn (fn [{:keys [value]}]
+                                {:R (get-in value [0 :value])
+                                 :end (get-in value [1 :value 0 :value])
+                                 :m1 (get-in value [2 :value 0 :value])})})
+                 (Seq [(Char "m1")] {:type :m1 :fn first-char})
+                 (Seq [(Char "trn")] {:type :trn :fn first-char})
+                 (Seq [(Char "trn1")] {:type :trn1 :fn first-char})
+                 (Seq [(Char "trn2")] {:type :trn2 :fn first-char})
+                 (Seq [(Char "mhr") (MayBe (Char "aut")) (Char "rus")]
+                      {:type :example
+                       :fn (fn [{:keys [value]}]
+                             {:lang1 (:value (filter #(= (:value %) "mhr") value))
+                              :aut (:value (first (:value (filter #(= (:value %) "aut") value))))
+                              :lang2 (:value (filter #(= (:value %) "rus") value))
+                              :phraseologism false
+                              }
+                             )})
                  (Seq [(Char "ex")
                        (Plus
                          (Seq [
@@ -261,8 +279,11 @@
                                       ]))
                                ])
                          )
-                       ])
-                 ])))
+                       ] {:type :ex})
+                 ])
+            {:fn
+             (fn [{:keys [value]}] (mapv :value value))
+             }))
       "rus-01"
       (Star
         (Or
