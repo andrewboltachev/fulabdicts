@@ -263,9 +263,9 @@
                  (Seq [(Char "mhr") (MayBe (Char "aut")) (Char "rus")]
                       {:type :example
                        :fn (fn [{:keys [value]}]
-                             {:lang1 (:payload (filter #(= (:value %) "mhr") value))
-                              :aut (:payload (first (:value (filter #(= (:value %) "aut") value))))
-                              :lang2 (:payload (filter #(= (:value %) "rus") value))
+                             {:lang1 (:payload (first (filter #(= (:value %) "mhr") value)))
+                              :aut (:payload (first (:value (first (filter #(= (:value %) "aut") value)))))
+                              :lang2 (:payload (first (filter #(= (:value %) "rus") value)))
                               :phraseologism false
                               }
                              )})
