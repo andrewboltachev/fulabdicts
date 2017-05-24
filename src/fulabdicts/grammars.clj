@@ -228,7 +228,7 @@
           )
         
       )
-      "mhr-rus-02"
+     "mhr-rus-02"
       (let [first-char (fn [{:keys [value]}] (-> value first :payload))
             refseq1 (Seq [
                           (MayBe (Char "u1"))
@@ -283,7 +283,44 @@
                  ])
             {:fn
              (fn [{:keys [value]}] (mapv :value value))
-             }))
+             })) 
+
+
+      "mhr-rus-03"
+      (let [first-char (fn [{:keys [value]}] (-> value first :payload))
+            refseq1 (Seq [
+                          (MayBe (Char "u1"))
+                          (Char "ref")
+                          (MayBe (Char "u"))
+                          ])]
+
+
+
+
+
+        (Seq [(Char "pre")
+              (Char "trn1")])
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        )
+
+
+
+
+
+
       "rus-01"
       (Star
         (Or

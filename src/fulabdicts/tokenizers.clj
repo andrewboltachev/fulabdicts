@@ -71,6 +71,9 @@
    "mhr-rus-02"
    mhr-rus-01-tokenizer
    
+   "mhr-rus-03"
+   mhr-rus-01-tokenizer
+   
    "rus-01" [
         :tag-compare-fn
       #(if-not

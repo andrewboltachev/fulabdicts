@@ -14,6 +14,11 @@
     :lang_in "mhr"
     :lang_out "rus"
     }
+   "mhr-rus-03"
+   {
+    :lang_in "mhr"
+    :lang_out "rus"
+    }
    "rus-01"
    {
     :lang_in "rus"
