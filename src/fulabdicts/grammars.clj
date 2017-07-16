@@ -368,8 +368,17 @@
                         x
                         (Star (Seq (conj h x)))
                         ])
-                   ))]
+                   ))
+              
+              MayBe2 (fn [x r]
+                       (Or
+                         [r
+                          (Seq [x r])]))              
+              ]
           
+          (Seq [
+            (MayBe (Char "i"))
+            (MayBe (Char "pre"))
              (s1
                [(Char "R")]
                 (Star (Seq [
@@ -380,12 +389,12 @@
                                   (Char "trn2")
                                   examples
                                   ]))
-                                  (Seq [(Or [(Char "trn") (Char "i")])
-                                 examples
-                                        ]
-                                       examples
-                                       )
+                                  (Seq
+                                    [(Or [(Char "trn") (Char "i")])
+                                     examples
+                                     ])
+                                    examples
                                 ])
                             ]))
-              ))
+              )]))
    })

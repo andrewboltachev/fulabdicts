@@ -144,7 +144,7 @@
                           ;ifipp
                           identity
                      [
-                       (if (= tag "trn")
+                       (cond (= tag "trn")
                      (let [
                            fv (first value)
                            fvs (string? fv)
@@ -168,6 +168,12 @@
                         {:tag tag :value value}
                         )
                      )
+                             #_(and
+                               (= tag "i")
+                               (= value ["употребляется лишь в составе выражений:"]))
+                             #_{:tag "ii"
+                              :value value}
+                             :else
                         {:tag tag :value value}
                          )
                          ])))
