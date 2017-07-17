@@ -283,7 +283,7 @@
                  ])
             {:fn
              (fn [{:keys [value]}] (mapv :value value))
-             })) 
+             }))
 
 
       "mhr-rus-03"

@@ -104,6 +104,8 @@
 (def params-file-data-ch (chan))
 
 (def result-ch (chan))
+(def result-print-ch (chan))
+
 
 (go-loop []
          (let [
@@ -305,6 +307,7 @@
         (if (-> options :cli-options :options :no-result)
           (do
             (println "No result, returning back")
+            (put! result-print-ch [options result])
             (recur
               input
               value
@@ -426,7 +429,35 @@
   )
 
 ; (aprint (grammar_pretty (Or (reduce (fn [a b] (concat a (cons (Seq [ b examples ])  (map #(Star (Seq [b %])) a) ))) [] (reverse [trn1 trn2 trn])))))
+(go-loop []
+         (let [[{:keys [structure-name] :as options} result] (<! result-print-ch)
+               folding (-> options :cli-options :no-folding)
+               ]
+           
+(let [m (get fulabdicts.metadata/data structure-name)
 
+                   ]
+              (doseq [[word body] result]
+                (println word)
+                (aprint
+                  (->>
+                    body
+                    (clojure.walk/postwalk
+                      (fn [x]
+                        (if (and (map? x) (fn? (:payload x)))
+                          (dissoc x :payload)
+                          x)
+                        )
+                      )
+                    ;regexpforobj/grammar_pretty
+                    )
+                  )
+                (newline)
+                )
+               )
+           )
+         (recur)
+         )
 
 (go-loop []
          (let [[{:keys [structure-name] :as options} result] (<! result-ch)
